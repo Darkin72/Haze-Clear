@@ -90,3 +90,23 @@ def resolve_datasets(names, specs, project_root, overrides, cache_root, *,
             errors[name] = str(exc)
             print(f'{name}: chuẩn bị dataset lỗi: {exc}', flush=True)
     return roots, errors
+
+
+def resolve_training_roots(names, specs, project_root, train_roots, overrides, cache_root,
+                           *, enabled=True, allow_download=True, download=None,
+                           reside_handle='kmljts/reside-6k'):
+    """Resolve separate training data; never substitute a SOTS benchmark directory."""
+    roots = dict(train_roots)
+    missing = [n for n in names if n.startswith('sots-') and not roots.get(n)]
+    if not enabled or not missing:
+        return roots
+    resolved, _ = resolve_datasets(['reside6k'], specs, project_root, overrides, cache_root,
+        allow_download=allow_download, test_only=False, download=download,
+        reside_handle=reside_handle)
+    base = Path(resolved['reside6k'])
+    train = next((p for p in base.iterdir() if p.is_dir() and p.name.lower() == 'train'), None)
+    if train is None or not pair_root(train):
+        raise FileNotFoundError(f'Cần RESIDE-6K/train với các cặp GT/hazy, không dùng test: {base}')
+    for name in missing:
+        roots[name] = str(train.resolve())
+    return roots

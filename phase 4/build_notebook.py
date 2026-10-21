@@ -38,17 +38,17 @@ md('''## 1. Chọn dataset, đường dẫn và artifact
 | I-HAZE, mỗi model | 5.000 | 27.000 |
 | Lặp đo tốc độ | 15 | 40 |
 
-Cả hai đều tính chất lượng trên toàn bộ test. SOTS ở quick chỉ dùng checkpoint RESIDE-6K;
-standard chỉ fine-tune khi có ITS/OTS train riêng. Lịch dài hơn không bảo đảm PSNR cao hơn.
+Cả hai đều tính chất lượng trên toàn bộ test. SOTS dùng checkpoint RESIDE-6K để khởi tạo model nhẹ,
+phục hồi trên RESIDE-6K/train hoặc TRAIN_ROOT riêng. Lịch dài hơn không bảo đảm PSNR cao hơn.
 
 `DATASET_NAME='all'` chạy lần lượt **SOTS Indoor → SOTS Outdoor → O-HAZY → I-HAZE**;
 không bao gồm RESIDE-6K riêng. Mỗi dataset có thư mục riêng, cuối lượt có bảng tổng hợp.
 
-Preset `quick` ưu tiên thời gian: RESIDE/SOTS nạp chung checkpoint RESIDE-6K, bỏ qua train,
-đánh giá đầy đủ test và chỉ tối ưu runtime. O-HAZY dùng lịch phục hồi ngắn từ trọng số sẵn có.
+Preset `quick` ưu tiên thời gian: RESIDE/SOTS nạp chung checkpoint RESIDE-6K và phục hồi model nhẹ
+trên dữ liệu train riêng, sau đó đánh giá đầy đủ benchmark. O-HAZY dùng lịch phục hồi ngắn.
 I-HAZE vẫn khởi tạo ngẫu nhiên hai model độc lập để so sánh.
-SOTS chuẩn là benchmark test. Không có `TRAIN_ROOT` ITS/OTS riêng thì chỉ thử fusion trên model đầy đủ,
-không cắt block mà thiếu bước phục hồi chất lượng. `DATA_ROOT_OVERRIDE` và `CHECKPOINTS` cho phép dùng
+SOTS chuẩn là benchmark test. Không có `TRAIN_ROOT` riêng thì tự lấy phần train của RESIDE-6K;
+không cập nhật trọng số trên SOTS test. `DATA_ROOT_OVERRIDE` và `CHECKPOINTS` cho phép dùng
 các file đã có trên Drive hoặc runtime cũ. `AUTO_DOWNLOAD_DATASETS=True` tự tải RESIDE-6K/SOTS
 khi thiếu, tái dùng cache cho các lượt sau. SOTS chỉ tải một lần cho Indoor/Outdoor.
 `RUN_MODE='auto'` tiếp tục lượt dở hoặc benchmark lượt đã xong.''')
@@ -68,7 +68,9 @@ KAGGLE_RESIDE6K_DATASET = 'kmljts/reside-6k'
 KAGGLE_SOTS_DATASET = 'balraj98/synthetic-objective-testing-set-sots-reside'
 DATA_DOWNLOAD_ROOT = '/content/wdmamba_phase4/datasets_cache'
 TRAIN_ROOT = ''             # ITS/OTS train riêng, tách khỏi benchmark SOTS
-TRAIN_ROOTS = {'sots-its':'', 'sots-ots':''}  # dùng khi all + standard
+TRAIN_ROOTS = {'sots-its':'', 'sots-ots':''}  # ưu tiên train riêng nếu đã có
+AUTO_RESIDE_TRAIN = True    # tự tải/tái dùng RESIDE-6K/train khi chưa điền TRAIN_ROOT(S)
+REQUIRE_COMPRESSION = True  # dừng nếu chỉ có bản sao Reference, không gọi nó là model cải tiến
 EVAL_ONLY = None            # None tự nhận diện; False bắt buộc train/val
 CHECKPOINTS = {'o-hazy': '', 'sots-its': '', 'sots-ots': '', 'reside6k': ''}
 RESIDE_CHECKPOINT = ''      # Điền một lần: dùng chung cho RESIDE-6K, SOTS Indoor và Outdoor
@@ -138,9 +140,19 @@ def download_dataset(handle):
 data_overrides = dict(DATA_ROOT_OVERRIDES) if DATASET_NAME == 'all' else {DATASET_NAME: DATA_ROOT_OVERRIDE}
 RESOLVED_DATA_ROOTS, DATASET_ERRORS = dataset_loader['resolve_datasets'](
     ACTIVE_DATASETS, DATASET_SPECS, PROJECT_ROOT, data_overrides, DATA_DOWNLOAD_ROOT,
-    allow_download=AUTO_DOWNLOAD_DATASETS, test_only=PRESET == 'quick', download=download_dataset,
+    allow_download=AUTO_DOWNLOAD_DATASETS, test_only=False, download=download_dataset,
     reside_handle=KAGGLE_RESIDE6K_DATASET, sots_handle=KAGGLE_SOTS_DATASET,
     continue_on_error=DATASET_NAME == 'all')
+if DATASET_NAME == 'all':
+    TRAIN_ROOTS = dataset_loader['resolve_training_roots'](
+        ACTIVE_DATASETS, DATASET_SPECS, PROJECT_ROOT, TRAIN_ROOTS, data_overrides,
+        DATA_DOWNLOAD_ROOT, enabled=AUTO_RESIDE_TRAIN, allow_download=AUTO_DOWNLOAD_DATASETS,
+        download=download_dataset, reside_handle=KAGGLE_RESIDE6K_DATASET)
+elif DATASET_NAME.startswith('sots-') and not TRAIN_ROOT:
+    TRAIN_ROOT = dataset_loader['resolve_training_roots'](
+        [DATASET_NAME], DATASET_SPECS, PROJECT_ROOT, {DATASET_NAME: ''}, data_overrides,
+        DATA_DOWNLOAD_ROOT, enabled=AUTO_RESIDE_TRAIN, allow_download=AUTO_DOWNLOAD_DATASETS,
+        download=download_dataset, reside_handle=KAGGLE_RESIDE6K_DATASET).get(DATASET_NAME, '')
 DATA_ROOT = Path(RESOLVED_DATA_ROOTS.get(ACTIVE_DATASETS[0], PROJECT_ROOT/SPEC['relative_root']))
 if DATASET_NAME == 'all':
     DATA_ROOT_OVERRIDES.update(RESOLVED_DATA_ROOTS)
@@ -163,6 +175,7 @@ CONFIG = {
     'student_checkpoint': STUDENT_CHECKPOINT,
     'checkpoint_zip': CHECKPOINT_ZIP, 'checkpoint_search_roots': CHECKPOINT_SEARCH_ROOTS,
     'allow_weight_download': ALLOW_WEIGHT_DOWNLOAD,
+    'require_compression': REQUIRE_COMPRESSION,
     'seed': 2040, 'device': 'cuda', 'den_blocks': 1, 'detail_width': 16, 'reference_depth': 4,
     'train_max_side': EVAL_MAX_SIDE, 'eval_max_side': EVAL_MAX_SIDE, 'crop_border': 4,
     'cache_images': 40, 'warmup': 8, 'timing_repeats': 40, 'log_every': 50, 'val_every': 200,
@@ -185,7 +198,7 @@ CONFIG = {
 if PRESET not in ('quick', 'standard'): raise ValueError('PRESET không hợp lệ.')
 CONFIG['preset'] = PRESET
 if PRESET == 'quick':
-    CONFIG.update(runtime_only_datasets=['reside6k','sots-its','sots-ots'],
+    CONFIG.update(runtime_only_datasets=[],
                   cache_shape_benchmarks=True, skip_duplicate_eager=True,
                   warmup=5, timing_repeats=15, val_every=100, patience=4)
     CONFIG['adapt_schedule'] = [
@@ -196,10 +209,20 @@ if PRESET == 'quick':
         {'steps':4000, 'crop':256, 'accum':1, 'lr':2e-4},
         {'steps':1000, 'crop':0, 'accum':1, 'lr':2e-5}]
     CONFIG['reference_schedule'] = list(CONFIG['scratch_schedule'])
-    if DATASET_NAME in ('reside6k', 'sots-its', 'sots-ots'):
-        # SOTS is evaluated with the RESIDE-6K checkpoint; never fine-tune on
-        # SOTS images in the quick path, even when TRAIN_ROOT is present.
-        CONFIG['eval_only'] = True
+    CONFIG['synthetic_adapt_schedule'] = [
+        {'steps':1800, 'crop':256, 'accum':1, 'lr':1e-4, 'den_only':True},
+        {'steps':600, 'crop':256, 'accum':1, 'lr':2e-5, 'trunk_lr':2e-6}]
+    CONFIG['synthetic_val_max_scenes'] = 32
+    CONFIG['synthetic_val_max_pairs'] = 64
+    CONFIG['synthetic_val_every'] = 200
+    CONFIG['synthetic_patience'] = 12
+if DATASET_NAME in ('reside6k', 'sots-its', 'sots-ots'):
+    CONFIG['adapt_schedule'] = CONFIG.get('synthetic_adapt_schedule', CONFIG['adapt_schedule'])
+    CONFIG['val_max_scenes'] = CONFIG.get('synthetic_val_max_scenes', 0)
+    CONFIG['val_max_pairs'] = CONFIG.get('synthetic_val_max_pairs', 0)
+    CONFIG['val_every'] = CONFIG.get('synthetic_val_every', CONFIG['val_every'])
+    CONFIG['patience'] = CONFIG.get('synthetic_patience', CONFIG['patience'])
+    CONFIG['exclude_benchmark_overlap'] = DATASET_NAME.startswith('sots-')
 CONFIG_PATH = RUN_ROOT/'config.json'
 CONFIG_PATH.write_text(json.dumps(CONFIG, indent=2, ensure_ascii=False), encoding='utf-8')
 print(json.dumps(CONFIG, indent=2, ensure_ascii=False))
@@ -441,7 +464,7 @@ print('Created', HERE/'recover_phase4_missing_checkpoints.ipynb')
 
 fresh = copy.deepcopy(nb)
 fresh.metadata['colab'] = {'name': 'phase4_all_fresh.ipynb'}
-fresh.metadata['wdmamba_phase'] = '4-wavelite-all-fresh-v1'
+fresh.metadata['wdmamba_phase'] = '4-wavelite-all-fresh-v2-compression'
 fresh.cells[0].source = fresh.cells[0].source.replace(
     '# Phase 4 — WaveLite-Final', '# Phase 4 — WaveLite-Final / ALL / RUN MỚI')
 fresh.cells[0].source += '''\n\n**Chọn GPU rồi Run all, không cần notebook khôi phục hoặc kết quả cũ.**
@@ -453,7 +476,9 @@ Kiểm tra dataset/checkpoint trước, sau đó kiểm tra môi trường và f
 Chỉ bắt đầu train sau khi cả bốn job sẵn sàng; lỗi chuẩn bị sẽ dừng với thông báo cụ thể.'''
 fresh.cells[1].source += '''\n\nBản chạy mới: `quick` I-HAZE dùng đủ 4.000 bước crop256 + 1.000 bước ảnh đầy đủ
 cho mỗi model, chọn checkpoint tốt nhất bằng validation. Không dừng ở 1.700 bước như lượt cũ.
-`standard` vẫn có early stopping. SOTS không tự tải ITS/OTS train vì lượt nhanh chỉ benchmark.
+`standard` vẫn có early stopping. SOTS tự dùng RESIDE-6K/train nếu chưa có TRAIN_ROOT riêng,
+phục hồi kiến trúc nhẹ tối đa 1.800 + 600 bước ở quick, chọn bằng validation tách theo scene.
+Giới hạn validation quick là 32 scene/64 cặp; test vẫn đủ 500 ảnh mỗi miền.
 Để các đường dẫn checkpoint trống nếu muốn tự tải archive; chỉ điền khi đã có file local.'''
 setup = fresh.cells[2]
 setup.source = setup.source.replace(
@@ -501,6 +526,11 @@ if cfg['dataset_name'] == 'i-haze':
 elif not (inputs['evaluation_only'] or cfg['dataset_name'] in cfg.get('runtime_only_datasets', [])):
     start = arch.reference_model(cfg['repo_root'], inputs['student_source']) if inputs['student_source'] else ref
     models.append(arch.final_from_reference(start, cfg['den_blocks'], cfg['detail_width'])[0])
+runner.require_adaptation(cfg, inputs)
+if cfg.get('require_compression') and (len(models) < 2 or not runner.compression_info(ref, models[-1])['compressed']):
+    raise RuntimeError('Preflight: model cuối chưa có kiến trúc nhẹ hơn Reference.')
+print('Architecture preflight:', [m.spec for m in models], flush=True)
+if len(models) > 1: print('Compression preflight:', runner.compression_info(ref, models[-1]), flush=True)
 probe = torch.rand(1, 3, 256, 256, device=cfg['device'])
 for model in models:
     model.to(cfg['device']).eval()

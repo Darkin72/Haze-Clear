@@ -57,6 +57,7 @@ chiếu hiện có chỉ là Phase3, điều kiện tăng FPS2× có thể khôn
 DEN/detail rồi joint; loss GT + teacher regularization và best EMA theo validation.
 I-HAZE: final và reference khởi tạo ngẫu nhiên độc lập, GT loss, không KD/truyền trọng số.
 
-SOTS không có tập ITS/OTS train riêng: chỉ giữ cấu trúc checkpoint và tối ưu runtime Conv–BN
-fusion. Artifact ghi `model_spec.kind=reference`, report đánh giá kiến trúc thực đo; không
-đánh tráo kết quả bản runtime đầy đủ thành kết quả kiến trúc compact ở trên.
+SOTS luôn giữ ảnh benchmark làm test. Khi không có ITS/OTS train riêng, notebook tự dùng
+RESIDE-6K/train tách khỏi test để phục hồi model compact; có thể thay bằng `TRAIN_ROOT` riêng.
+Nếu không có train/val, `REQUIRE_COMPRESSION=True` dừng trước benchmark thay vì ghi bản sao
+Reference thành WaveLite. Artifact ghi `compression` và `model_spec` để kiểm tra kiến trúc thực đo.

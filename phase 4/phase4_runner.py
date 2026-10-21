@@ -1,4 +1,4 @@
-﻿"""Phase 4: reproducible adaptation/training and same-session quality/speed evaluation."""
+"""Phase 4: reproducible adaptation/training and same-session quality/speed evaluation."""
 from pathlib import Path
 from collections import OrderedDict
 import copy
@@ -107,6 +107,7 @@ def resolve_source(cfg):
 
 def prepare(cfg):
     inputs = data.prepare(cfg)
+    require_adaptation(cfg, inputs)
     source = resolve_source(cfg)
     student = Path(cfg['student_checkpoint']).expanduser().resolve() if cfg.get('student_checkpoint') else None
     if student is None and inputs['dataset_name'] == 'o-hazy' and source is not None:
@@ -150,9 +151,26 @@ def identity(cfg, inputs):
             'eval_max_side', 'crop_border', 'adapt_schedule', 'scratch_schedule', 'reference_schedule',
             'l1_weight', 'edge_weight', 'kd_weight', 'ema_decay', 'weight_decay', 'val_every', 'patience')
     return {'config': {**{k: cfg[k] for k in keys},
-                       'runtime_only_datasets': cfg.get('runtime_only_datasets', [])},
+                       'runtime_only_datasets': cfg.get('runtime_only_datasets', []),
+                       'require_compression': cfg.get('require_compression', False)},
             'manifest': inputs['manifest_sha256'],
             'source': inputs['source_sha256'], 'student': inputs['student_sha256'], 'code': inputs['code_sha256']}
+
+
+def require_adaptation(cfg, inputs):
+    if cfg.get('require_compression') and (
+            inputs['evaluation_only'] or cfg['dataset_name'] in cfg.get('runtime_only_datasets', [])):
+        raise ValueError('REQUIRE_COMPRESSION=True cần train/val riêng để tạo model nhẹ. '
+                         'SOTS cần TRAIN_ROOT hoặc AUTO_RESIDE_TRAIN=True; không dùng bản sao Reference.')
+
+
+def compression_info(reference, final):
+    ref_count = sum(p.numel() for p in reference.parameters())
+    final_count = sum(p.numel() for p in final.parameters())
+    return {'reference_params': ref_count, 'final_params': final_count,
+            'parameter_reduction': 1-final_count/max(1, ref_count),
+            'architecture_changed': reference.spec != final.spec,
+            'compressed': reference.spec != final.spec and final_count < ref_count}
 
 
 def validate(cfg, inputs):
@@ -448,11 +466,17 @@ def write_report(output, rows, metadata, cfg):
                      f'{r["FPS"]:.2f} | {r["FPS_over_MSE"]:.2f} | {r["FPS_256"]:.2f} | '
                      f'{r["GFLOPs_256_estimated_total"]:.3f} | {r["params_M"]:.3f} |')
     ref, final = rows[0], rows[-1]
+    compression = metadata.get('compression', {})
+    architecture_note = ('Chỉ tối ưu runtime: giữ nguyên kiến trúc và trọng số Reference; chưa có model nén.'
+                         if metadata['origin']['method'] == 'runtime_only' else
+                         f'Kiến trúc: DEN {metadata["reference_spec"]["depth"]} → '
+                         f'{metadata["model_spec"]["depth"]} U-block/group; '
+                         f'giảm {100*compression.get("parameter_reduction", 0):.1f}% tham số.')
     # A concise, reviewable highlight uses the actual measured deltas only.
     lines[4:4] = [f'**PSNR {final["PSNR"]:.2f} dB · {final["FPS"]:.1f} FPS · '
                   f'{final["GFLOPs_256_estimated_total"]:.2f} GFLOPs ở 256² · '
                   f'FPS/MSE {final["FPS_over_MSE"]:,.0f}**', '']
-    lines += ['', f'ΔPSNR: {final["PSNR"]-ref["PSNR"]:+.4f} dB; tăng tốc: {final["FPS"]/ref["FPS"]:.3f}×; '
+    lines += ['', architecture_note, '', f'ΔPSNR: {final["PSNR"]-ref["PSNR"]:+.4f} dB; tăng tốc: {final["FPS"]/ref["FPS"]:.3f}×; '
               f'tỉ lệ FPS/MSE: {final["FPS_over_MSE"]/ref["FPS_over_MSE"]:.3f}×.',
               f'Mục tiêu: giảm PSNR ≤ {cfg["psnr_tolerance_db"]:.2f} dB, FPS ≥ {cfg["target_speedup"]:.2f}× '
               f'và FPS 256 ≥ {cfg["target_speedup_256"]:.2f}×. REVIEW nghĩa là chưa đạt đủ điều kiện.', '',
@@ -482,6 +506,7 @@ def write_report(output, rows, metadata, cfg):
         lines = lines[:6] + lines[6:8+len(rows)] + [
             '', f'**Tăng tốc {final["FPS"]/ref["FPS"]:.2f}× · ΔPSNR {final["PSNR"]-ref["PSNR"]:+.3f} dB · '
             f'FPS/MSE {final["FPS_over_MSE"]/ref["FPS_over_MSE"]:.2f}×.**',
+            architecture_note,
             f'Test: {final["images"]} ảnh; FP32, batch 1; max-side {cfg["eval_max_side"]}; '
             f'crop border {cfg["crop_border"]}. FPS/MSE = FPS / MSE RGB [0,1] trung bình theo ảnh.',
             'GFLOPs gồm counted + ước tính scan/FFT/Haar; chưa đếm đầy đủ normalization/elementwise. '
@@ -516,6 +541,8 @@ article strong{display:block;font-size:38px;letter-spacing:-1px}article span{fon
 </style><main>'''
     document += f'<small>KẾT QUẢ THỰC NGHIỆM · PHASE 4</small><h1>{escape(cfg["dataset_name"].upper())}</h1>'
     document += f'<span class="badge">{escape(metadata["status"])}</span><div class="cards">{body}</div>'
+    if metadata['origin']['method'] == 'runtime_only':
+        document += '<p>Chỉ tối ưu runtime: giữ nguyên kiến trúc và trọng số Reference; chưa có model nén.</p>'
     document += f'<div class="delta">Tăng tốc <b>{final["FPS"]/ref["FPS"]:.2f}×</b> · '
     document += f'ΔPSNR <b>{final["PSNR"]-ref["PSNR"]:+.3f} dB</b> · '
     document += f'FPS/MSE <b>{final["FPS_over_MSE"]/ref["FPS_over_MSE"]:.2f}×</b></div>'
@@ -532,6 +559,7 @@ def run(cfg, mode='auto'):
     configure(cfg); device_for(cfg)
     output = Path(cfg['output_root']); output.mkdir(parents=True, exist_ok=True)
     inputs = json.loads((Path(cfg['work_root'])/'inputs.json').read_text(encoding='utf-8')); validate(cfg, inputs)
+    require_adaptation(cfg, inputs)
     scratch = cfg['dataset_name'] == 'i-haze'
     if scratch:
         if inputs['evaluation_only']: raise ValueError('I-HAZE cần train/val để khởi tạo ngẫu nhiên.')
@@ -560,27 +588,36 @@ def run(cfg, mode='auto'):
         else:
             start = arch.reference_model(cfg['repo_root'], inputs['student_source']) if inputs['student_source'] else reference
             final, selected = arch.final_from_reference(start, cfg['den_blocks'], cfg['detail_width'])
+            if cfg.get('require_compression') and not compression_info(reference, final)['compressed']:
+                raise ValueError('Model cuối chưa giảm tham số so với Reference; dừng trước train.')
+            print('Before recovery training:', compression_info(reference, final), flush=True)
             origin = {'method': 'inherited', 'source': inputs['source'], 'student_source': inputs['student_source'],
                       'selected_blocks': selected}
             training = train_model(final, cfg, inputs, output, 'final', cfg['adapt_schedule'], 'inherited',
                                    teacher=reference, mode=mode)
+    compression = compression_info(reference, final)
+    if cfg.get('require_compression') and not compression['compressed']:
+        raise ValueError('Model cuối không có kiến trúc nhẹ hơn Reference; không xuất bản sao thành WaveLite.')
+    print('Architecture check:', compression, flush=True)
     reference.cpu(); final.cpu()
     deploy, runtime = choose_runtime(copy.deepcopy(final), cfg, inputs, output)
     # Runtime selection is sealed before any test quality is computed.
     rows = []
     jobs = [(reference, 'Reference', 'eager')]
-    if not (origin['method'] == 'runtime_only' and cfg.get('skip_duplicate_eager', False)):
-        jobs.append((final, 'WaveLite_eager', 'eager'))
-    jobs.append((deploy, 'WaveLite_deploy', runtime['execution']))
+    runtime_only = origin['method'] == 'runtime_only'
+    if not (runtime_only and cfg.get('skip_duplicate_eager', False)):
+        jobs.append((final, 'Reference_copy' if runtime_only else 'WaveLite_eager', 'eager'))
+    jobs.append((deploy, 'Reference_runtime' if runtime_only else 'WaveLite_deploy', runtime['execution']))
     for model, label, execution in jobs:
         rows.append(evaluate_one(model, label, execution, cfg, inputs, output))
         data.write_csv(output/'summary_partial.csv', rows)
     gates = assess(rows[0], rows[-1], cfg)
+    if cfg.get('require_compression'): gates['architecture_compression'] = compression['compressed']
     gates['deployment_quality'] = abs(rows[-1]['PSNR']-rows[-2]['PSNR']) <= cfg['deploy_psnr_tolerance_db']
     metadata = {'status': 'PASS' if all(gates.values()) else 'REVIEW', 'gates': gates,
                 'origin': origin, 'architecture_version': arch.ARCH_VERSION, 'model_spec': final.spec,
                 'reference_spec': reference.spec, 'training': training, 'reference_training': reference_training,
-                'runtime': runtime, 'identity': identity(cfg, inputs),
+                'runtime': runtime, 'compression': compression, 'identity': identity(cfg, inputs),
                 'gpu': torch.cuda.get_device_name() if torch.cuda.is_available() else 'CPU',
                 'torch': torch.__version__, 'cuda': torch.version.cuda,
                 'FPS_MSE_definition': 'FPS / arithmetic mean per-image RGB MSE on [0,1], same crop as PSNR',

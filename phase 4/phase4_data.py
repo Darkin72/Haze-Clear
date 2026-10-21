@@ -148,12 +148,14 @@ def collect_pairs(root, dataset_name='o-hazy'):
     return pairs
 
 
-def _holdout_train(rows, seed, fraction):
+def _holdout_train(rows, seed, fraction, max_scenes=0):
     scenes = sorted({r['scene'] for r in rows})
     if len(scenes) < 2:
         raise ValueError('Cần ít nhất hai scene train để tách validation.')
     random.Random(seed).shuffle(scenes)
-    val = set(scenes[:min(len(scenes)-1, max(1, round(len(scenes)*fraction)))])
+    count = min(len(scenes)-1, max(1, round(len(scenes)*fraction)))
+    if max_scenes: count = min(count, max_scenes)
+    val = set(scenes[:count])
     return [r for r in rows if r['scene'] not in val], [r for r in rows if r['scene'] in val]
 
 
@@ -216,16 +218,42 @@ def dataset_splits(cfg):
         if train_root == data or train_root.is_relative_to(data) or data.is_relative_to(train_root):
             raise ValueError('TRAIN_ROOT phải tách biệt với thư mục benchmark SOTS.')
         training = collect_pairs(train_root, name)
+        if cfg.get('exclude_benchmark_overlap'):
+            # Integrity filtering only; never use test predictions/quality to select training data.
+            scenes = {r['scene'] for r in splits['test']}
+            test_hashes = {sha256(r[k]) for r in splits['test'] for k in ('clear', 'hazy')}
+            hashes = {}
+            blocked = set(scenes)
+            for row in training:
+                for key in ('clear', 'hazy'):
+                    if row[key] not in hashes: hashes[row[key]] = sha256(row[key])
+                    if hashes[row[key]] in test_hashes: blocked.add(row['scene'])
+            before = len(training)
+            training = [r for r in training if r['scene'] not in blocked]
+            print(f'Loại {before-len(training)} cặp train trùng scene/nội dung với benchmark.', flush=True)
         explicit = {r.get('source_split') for r in training}
         if explicit == {None}:
-            splits['train'], splits['val'] = _holdout_train(training, cfg.get('seed', 2026), .1)
+            splits['train'], splits['val'] = _holdout_train(
+                training, cfg.get('seed', 2026), .1, cfg.get('val_max_scenes', 0))
         elif explicit <= {'train', 'val'} and 'train' in explicit:
             splits['train'] = [r for r in training if r['source_split'] == 'train']
             splits['val'] = [r for r in training if r['source_split'] == 'val']
             if not splits['val']:
-                splits['train'], splits['val'] = _holdout_train(splits['train'], cfg.get('seed', 2026), .1)
+                splits['train'], splits['val'] = _holdout_train(
+                    splits['train'], cfg.get('seed', 2026), .1, cfg.get('val_max_scenes', 0))
         else:
             raise ValueError('TRAIN_ROOT chỉ chứa train/val hoặc các cặp ảnh phẳng, không chứa test.')
+    # Discard excess validation scenes/variants, never move them into training.
+    cap = cfg.get('val_max_scenes', 0)
+    if cap:
+        scenes = sorted({r['scene'] for r in splits['val']})
+        random.Random(cfg.get('seed', 2026)).shuffle(scenes)
+        chosen = set(scenes[:cap])
+        splits['val'] = [r for r in splits['val'] if r['scene'] in chosen]
+    pair_cap = cfg.get('val_max_pairs', 0)
+    if pair_cap and len(splits['val']) > pair_cap:
+        rows = list(splits['val']); random.Random(cfg.get('seed', 2026)).shuffle(rows)
+        splits['val'] = rows[:pair_cap]
     requested = cfg.get('eval_only')
     eval_only = (not splits['train']) if requested is None else bool(requested)
     if not splits['test'] or (not eval_only and (not splits['train'] or not splits['val'])):

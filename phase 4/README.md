@@ -10,7 +10,8 @@ Mỗi lần chạy cell cấu hình tạo run mới dưới `/content/wdmamba_ph
 model/kết quả từ run Phase 4 cũ. Môi trường và dữ liệu tải về vẫn có thể tái sử dụng.
 Notebook kiểm tra đủ checkpoint trước khi cài môi trường CUDA, rồi kiểm tra split, nạp
 strict và forward GPU cho cả bốn job trước khi train. Nếu thiếu bộ nào, nó dừng trước train.
-I-HAZE `quick` chạy đủ 5.000 bước mỗi model, chọn best bằng validation; SOTS chỉ tối ưu runtime,
+I-HAZE `quick` chạy đủ 5.000 bước mỗi model, chọn best bằng validation; SOTS phục hồi model nhẹ
+trên RESIDE-6K/train (hoặc TRAIN_ROOT riêng),
 O-HAZY tối ưu từ trọng số cùng miền. Report giữ PSNR, SSIM, MSE, FPS, GFLOPs và FPS/MSE.
 Chất lượng và tốc độ của lượt mới cần được đo trên GPU.
 
@@ -27,7 +28,8 @@ KAGGLE_SOTS_DATASET = 'balraj98/synthetic-objective-testing-set-sots-reside'
 SOTS tải một lần dùng chung cho Indoor/Outdoor, các lượt sau tái dùng cache KaggleHub và
 manifest `datasets_cache/downloads.json`. Đường dẫn `DATA_ROOT_OVERRIDE(S)` luôn được ưu tiên;
 đường dẫn nhập sai sẽ báo lỗi để sửa, không tự tải thay thế. Repo Git chỉ sparse-checkout
-O-HAZY/I-HAZE. RESIDE-6K `quick` dùng test để đánh giá, không tải ITS/OTS train riêng.
+O-HAZY/I-HAZE. RESIDE-6K `quick` giữ test riêng để đánh giá; SOTS tự tái dùng RESIDE-6K/train
+làm dữ liệu phục hồi nếu chưa đặt ITS/OTS TRAIN_ROOT.
 KaggleHub có thể yêu cầu xác thực nếu nguồn dữ liệu yêu cầu; lỗi tải được ghi rõ trong log.
 
 Repo mã nguồn của Haze Clear là [`Darkin72/Haze-Clear`](https://github.com/Darkin72/Haze-Clear).
@@ -39,7 +41,7 @@ Nếu đã clone mã nguồn ở vị trí khác, đặt `ARCH_ROOT_OVERRIDE` �
 `DATASET_NAME='all'` (mặc định) chạy **SOTS Indoor → SOTS Outdoor → O-HAZY → I-HAZE**,
 không chạy RESIDE-6K thành một bộ riêng. Mỗi job dùng process và thư mục riêng dưới
 `all/<run_name>/datasets/<dataset>/`; chỉ cài môi trường một lần. Điền đường dẫn từng bộ
-vào `DATA_ROOT_OVERRIDES`; `TRAIN_ROOTS` cho ITS/OTS riêng khi dùng standard. Scalar
+vào `DATA_ROOT_OVERRIDES`; `TRAIN_ROOTS` cho ITS/OTS riêng ở cả hai preset. Scalar
 `DATA_ROOT_OVERRIDE`/`TRAIN_ROOT` chỉ dành cho chạy một dataset. `RESIDE_CHECKPOINT` dùng
 chung cho hai bộ SOTS; `STUDENT_CHECKPOINT` trong all chỉ áp dụng O-HAZY.
 
@@ -65,8 +67,8 @@ bằng 0 lúc khởi tạo. Đây là cải tiến kế thừa WDMamba, không p
 |---|---|
 | `o-hazy` | Tối ưu checkpoint cùng miền. Ưu tiên teacher đầy đủ; tự dùng student Phase 3 nếu SHA256 teacher khớp. Nếu chỉ có Phase 3 thì nó là tham chiếu thực tế. |
 | `reside6k` | Dùng checkpoint RESIDE-6K và train/val riêng. Giữ test sẵn có. |
-| `sots-its` | Checkpoint Indoor hoặc RESIDE-6K; có `TRAIN_ROOT` ITS riêng thì tối ưu kiến trúc cuối. Thiếu train thì giữ cấu trúc đầy đủ và chỉ chọn runtime fusion. |
-| `sots-ots` | Tương tự Indoor, dùng checkpoint Outdoor và `TRAIN_ROOT` OTS riêng. |
+| `sots-its` | Checkpoint Indoor hoặc RESIDE-6K; tối ưu model nhẹ trên `TRAIN_ROOT` ITS riêng hoặc RESIDE-6K/train tự tải. |
+| `sots-ots` | Tương tự Indoor, ưu tiên `TRAIN_ROOT` OTS riêng nếu có. |
 | `i-haze` | Hai model khởi tạo ngẫu nhiên độc lập: tham chiếu DEN bốn U-block/group và model cuối. Không kế thừa trọng số hoặc dùng KD giữa hai model này. |
 
 Các thiết lập chính nằm ở cell đầu:
@@ -89,7 +91,12 @@ cho mỗi model. Đổi sang `standard` để dùng lịch dài bên dưới.
 
 Để chạy nhanh cho SOTS, dùng `PRESET='quick'` và đặt một checkpoint RESIDE-6K vào
 `RESIDE_CHECKPOINT` (hoặc để runner tự tìm `reside6k_32.15.pth`). Indoor/Outdoor sẽ dùng
-chung checkpoint đó, bỏ qua fine-tune trên SOTS và chỉ benchmark runtime. Preset nhanh giảm
+chung checkpoint đó, fine-tune model nhẹ trên RESIDE-6K/train hoặc TRAIN_ROOT riêng, sau đó
+đánh giá trên SOTS test. Quick chạy tối đa 1.800 bước DEN/detail và 600 bước joint ở crop256;
+validation tối đa 32 scene/64 cặp, tách theo scene và loại các scene/nội dung trùng benchmark.
+`REQUIRE_COMPRESSION=True` dừng nếu model cuối không giảm tham số so với Reference.
+Trước đây quick sao chép nguyên Reference nên PSNR/params/GFLOPs trùng nhau; luồng đó đã sửa.
+Preset nhanh giảm
 warm-up/repeats và có thể dùng chung latency/GFLOPs cho các ảnh cùng shape; chất lượng vẫn
 được tính trên toàn bộ test. `protocol_report.md` ghi giao thức đầy đủ.
 `report.html` trình bày bốn thẻ chỉ số, bảng so sánh và các tỉ lệ cải thiện thực đo;
@@ -140,7 +147,7 @@ GFLOPs dùng 1 MAC=2 FLOPs, counted Conv/Linear + SS2D projections; supplemental
 scan/FFT/Haar. Activation/normalization/pooling/elementwise không đếm đầy đủ. Bảng giữ
 GFLOPs256 và GFLOPs trung bình kích thước test; FPS256 không dùng làm tử số cho MSE ảnh test.
 
-`PASS` yêu cầu đồng thời ΔPSNR ≥ −0,30 dB, FPS ≥2×, FPS256 ≥1,10×, FPS/MSE không giảm và
+`PASS` mặc định yêu cầu model được nén, ΔPSNR ≥ −0,30 dB, FPS ≥2×, FPS256 ≥1,10×, FPS/MSE không giảm và
 PSNR deploy lệch eager ≤0,01 dB. `REVIEW` giữ nguyên số đo chưa đạt. Không chọn lại model
 hoặc kiến trúc bằng test. O-HAZY test đã được xem ở phase trước, validation cũng có thể
 trùng dữ liệu huấn luyện teacher; không coi đây là holdout nghiên cứu độc lập.
@@ -166,7 +173,9 @@ Các kiểm thử dùng mô hình nhỏ để kiểm tra luồng train/resume/fu
 forward/backward CUDA của WDMamba. Máy cục bộ hiện chỉ có PyTorch CPU, nên chưa có kết quả
 GPU Phase 4. Không có bảng PSNR/FPS giả hoặc giá trị mượn từ phase cũ.
 
-Kiểm thử hiện tại: 33/33 đạt, gồm tải và cache dataset/checkpoint, notebook chạy mới và
+Kiểm thử hiện tại: 38/38 đạt, gồm tải và cache dataset/checkpoint, notebook chạy mới và
 chặn train khi một job chưa sẵn sàng, resume sau gián đoạn cho kết quả khớp từng trọng số với
-lượt liên tục, phục hồi benchmark không gọi train, xuất/nạp eager, và SOTS runtime-only
-không gọi train hoặc cắt block. Notebook đã kiểm tra schema, cú pháp và source nhúng.
+lượt liên tục, phục hồi benchmark không gọi train, xuất/nạp eager, SOTS quick có gọi train
+model nhỏ với teacher, và chặn bản sao khi yêu cầu compression. Chế độ runtime-only tường minh
+vẫn không gọi train hoặc cắt block và dùng tên `Reference_runtime`.
+Notebook đã kiểm tra schema, cú pháp và source nhúng.

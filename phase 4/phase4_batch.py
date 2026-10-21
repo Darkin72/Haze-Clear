@@ -25,7 +25,14 @@ def make_configs(base, specs, root, data_roots=None, train_roots=None, checkpoin
             cfg['checkpoint'] = cfg['student_checkpoint'] = ''
             cfg['eval_only'] = False
         else:
-            cfg['eval_only'] = True if base.get('preset') == 'quick' and name.startswith('sots-') else base.get('eval_only')
+            cfg['eval_only'] = base.get('eval_only')
+        if name.startswith('sots-'):
+            cfg['adapt_schedule'] = copy.deepcopy(base.get('synthetic_adapt_schedule', base.get('adapt_schedule', [])))
+            cfg['val_max_scenes'] = base.get('synthetic_val_max_scenes', 0)
+            cfg['val_max_pairs'] = base.get('synthetic_val_max_pairs', 0)
+            cfg['val_every'] = base.get('synthetic_val_every', base.get('val_every', 200))
+            cfg['patience'] = base.get('synthetic_patience', base.get('patience', 8))
+            cfg['exclude_benchmark_overlap'] = True
         configs.append(cfg)
     return configs
 

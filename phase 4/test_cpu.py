@@ -98,7 +98,7 @@ class Phase4Tests(unittest.TestCase):
         self.assertEqual(len({c['output_root'] for c in configs}),4)
         self.assertEqual(configs[0]['data_root'],'custom_indoor')
         self.assertEqual(configs[1]['train_root'],'custom_train')
-        self.assertTrue(all(c['eval_only'] for c in configs[:2]))
+        self.assertTrue(all(c['eval_only'] is None for c in configs[:2]))
         self.assertEqual(configs[2]['student_checkpoint'],'student.pth')
         self.assertEqual(configs[3]['checkpoint'],''); self.assertEqual(configs[3]['student_checkpoint'],'')
         self.assertTrue(all(c['reside_checkpoint']=='shared.pth' for c in configs))
@@ -315,6 +315,47 @@ class Phase4Tests(unittest.TestCase):
             meta=json.loads((output/'metadata.json').read_text(encoding='utf-8'))
             self.assertEqual(meta['model_spec']['depth'],6)
             self.assertEqual(meta['origin']['method'],'runtime_only')
+            import csv
+            with (output/'summary.csv').open(encoding='utf-8') as f:
+                self.assertNotIn('WaveLite_deploy', [r['model'] for r in csv.DictReader(f)])
+
+    def test_compression_required_rejects_runtime_copy_before_loading_model(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg, inputs = fixtures(tmp)
+            cfg.update(dataset_name='sots-its', work_root=tmp, output_root=tmp, require_compression=True)
+            inputs['evaluation_only'] = True
+            (Path(tmp)/'inputs.json').write_text(json.dumps(inputs), encoding='utf-8')
+            with patch.object(runner, 'validate'), \
+                 patch.object(arch, 'reference_model', side_effect=AssertionError('loaded reference')):
+                with self.assertRaisesRegex(ValueError, 'REQUIRE_COMPRESSION'):
+                    runner.run(cfg, 'auto')
+            inputs['evaluation_only'] = False
+            cfg['runtime_only_datasets'] = ['sots-its']
+            with self.assertRaisesRegex(ValueError, 'REQUIRE_COMPRESSION'):
+                runner.require_adaptation(cfg, inputs)
+
+    def test_sots_quick_trains_smaller_architecture_with_teacher(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg, inputs = fixtures(tmp)
+            cfg.update(dataset_name='sots-its', preset='quick', work_root=tmp, output_root=tmp,
+                       repo_root='unused', require_compression=True)
+            inputs.update(source='reference.pth', student_source='')
+            (Path(tmp)/'inputs.json').write_text(json.dumps(inputs), encoding='utf-8')
+            reference = arch.PaddedModel(DENTrunk(6), {'kind':'reference', 'depth':6, 'detail_width':0})
+            final = arch.PaddedModel(TinyTrunk(), {'kind':'final', 'depth':1, 'detail_width':16})
+            with patch.object(runner, 'validate'), \
+                 patch.object(arch, 'reference_model', return_value=reference), \
+                 patch.object(arch, 'final_from_reference', return_value=(final, [0])), \
+                 patch.object(runner, 'train_model', wraps=runner.train_model) as training, \
+                 contextlib.redirect_stdout(io.StringIO()):
+                runner.run(cfg, 'auto')
+            training.assert_called_once()
+            self.assertIs(training.call_args.kwargs['teacher'], reference)
+            meta = json.loads((Path(tmp)/'metadata.json').read_text(encoding='utf-8'))
+            self.assertTrue(meta['compression']['compressed'])
+            self.assertGreater(meta['training']['steps'], 0)
+            self.assertEqual(meta['model_spec']['depth'], 1)
+            self.assertEqual(meta['reference_spec']['depth'], 6)
 
     def test_reside_checkpoint_is_shared_across_synthetic_sets(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -422,6 +463,46 @@ class DatasetDownloadTests(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 downloads.find_dataset(tmp, 'reside6k', test_only=True)
 
+    def test_sots_training_resolves_shared_reside_train_and_preserves_explicit_roots(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); base = root/'download'/'RESIDE-6K'
+            self.pair_dirs(base/'train'); self.pair_dirs(base/'test')
+            callback = unittest.mock.Mock(return_value=root/'download')
+            roots = downloads.resolve_training_roots(['sots-its', 'sots-ots'], data.DATASET_SPECS,
+                root/'project', {'sots-its':'explicit-its'}, {}, root/'cache', download=callback)
+            self.assertEqual(roots['sots-its'], 'explicit-its')
+            self.assertEqual(Path(roots['sots-ots']), (base/'train').resolve())
+            callback.assert_called_once_with('kmljts/reside-6k')
+            disabled = downloads.resolve_training_roots(['sots-its'], data.DATASET_SPECS,
+                root, {}, {}, root/'cache', enabled=False,
+                download=unittest.mock.Mock(side_effect=AssertionError('downloaded')))
+            self.assertEqual(disabled, {})
+
+    def test_sots_training_never_falls_back_to_reside_test(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); self.pair_dirs(root/'download'/'RESIDE-6K'/'test')
+            with self.assertRaisesRegex(FileNotFoundError, 'RESIDE-6K/train'):
+                downloads.resolve_training_roots(['sots-its'], data.DATASET_SPECS,
+                    root/'project', {}, {}, root/'cache', download=lambda handle:root/'download')
+
+    def test_sots_overlap_filtered_before_scene_holdout(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for base, ids in [('sots', ['1']), ('training', ['1', '2', '3', '4'])]:
+                for side in ('GT', 'hazy'):
+                    (root/base/side).mkdir(parents=True)
+                    for scene in ids:
+                        (root/base/side/f'{scene}.png').write_bytes(f'{scene}:{side}'.encode())
+            cfg = {'dataset_name':'sots-its', 'data_root':str(root/'sots'),
+                   'train_root':str(root/'training'), 'exclude_benchmark_overlap':True,
+                   'eval_only':False, 'val_max_scenes':1, 'val_max_pairs':1}
+            _, splits, only = data.dataset_splits(cfg)
+            self.assertFalse(only)
+            self.assertEqual(len(splits['val']), 1)
+            self.assertEqual(len(splits['train']), 2)
+            self.assertNotIn('1', {r['scene'] for k in ('train', 'val') for r in splits[k]})
+            data.assert_disjoint(splits)
+
     def test_all_dataset_download_error_keeps_local_jobs_available(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -510,7 +591,8 @@ class FreshNotebookTests(unittest.TestCase):
         for filename in set(checkpoints.WEIGHT_NAMES.values()):
             (weights/filename).write_bytes(b'path-only fixture')
         edits = {'LOCAL_PROJECT': str(project), 'ARCH_ROOT_OVERRIDE': str(repo),
-                 'DATA_ROOT_OVERRIDES': overrides}
+                 'DATA_ROOT_OVERRIDES': overrides,
+                 'TRAIN_ROOTS': {'sots-its':str(root/'its-train'), 'sots-ots':str(root/'ots-train')}}
 
         class LocalPaths(ast.NodeTransformer):
             def visit_Assign(self, node):
@@ -547,6 +629,14 @@ class FreshNotebookTests(unittest.TestCase):
             self.assertTrue(first['AUTO_DOWNLOAD_DATASETS'])
             self.assertTrue(first['ALLOW_WEIGHT_DOWNLOAD'])
             self.assertEqual([c['dataset_name'] for c in first['CONFIGS']], list(batch.ALL_DATASETS))
+            for c in first['CONFIGS'][:2]:
+                self.assertTrue(c['require_compression'])
+                self.assertNotIn(c['dataset_name'], c.get('runtime_only_datasets', []))
+                self.assertIsNone(c['eval_only'])
+                self.assertTrue(c['train_root'])
+                self.assertEqual(sum(s['steps'] for s in c['adapt_schedule']), 2400)
+                self.assertEqual(c['val_max_scenes'], 32)
+                self.assertEqual(c['val_max_pairs'], 64)
             ih = next(c for c in first['CONFIGS'] if c['dataset_name'] == 'i-haze')
             self.assertEqual(sum(s['steps'] for s in ih['scratch_schedule']), 5000)
             self.assertGreater(ih['patience']*ih['val_every'], max(s['steps'] for s in ih['scratch_schedule']))
