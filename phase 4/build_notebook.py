@@ -5,6 +5,9 @@ import nbformat as nbf
 
 HERE = Path(__file__).resolve().parent
 modules = {p.name: p.read_text(encoding='utf-8-sig') for p in sorted(HERE.glob('phase4_*.py'))}
+# Keep bootstrap outside phase4_*.py so adding download support does not change
+# the saved training identity of completed I-HAZE runs.
+modules['checkpoint_setup.py'] = (HERE/'checkpoint_setup.py').read_text(encoding='utf-8-sig')
 tree = ast.parse(modules['phase4_data.py'])
 specs = ast.literal_eval(next(n.value for n in tree.body if isinstance(n, ast.Assign)
     and any(isinstance(t, ast.Name) and t.id == 'DATASET_SPECS' for t in n.targets)))
@@ -73,7 +76,7 @@ CHECKPOINT_SEARCH_ROOTS = [
     '/content/wdmamba_o_hazy_final/weights', '/content/wdmamba_v2',
     '/content/wdmamba_sots', '/content/WDMamba_ckpts',
 ]
-ALLOW_WEIGHT_DOWNLOAD = False  # cờ riêng cho trọng số; dataset dùng AUTO_DOWNLOAD_DATASETS
+ALLOW_WEIGHT_DOWNLOAD = True   # tải một lần bộ checkpoint dùng chung qua Google Drive
 RUN_NAME = 'wavelite_quick_v2'  # run mới, không ghi đè phase 4 cũ
 RUN_MODE = 'auto'           # auto | train | resume | benchmark
 EVAL_MAX_SIDE = 768         # 0 = kích thước gốc; giữ 768 khi đối chiếu các phase cũ
@@ -256,7 +259,9 @@ mã, dữ liệu và nguồn trọng số; có khác biệt với một run đã
 Checkpoint O-HAZY tự dò theo tên, sau đó mới dùng Phase 3 local nếu không có bản đầy đủ.
 Khi có teacher đầy đủ, tự dùng student Phase 3 đã phục hồi chất lượng nếu SHA256 teacher khớp.
 Nguồn tham chiếu thực tế luôn được giữ trong metadata; không tính speedup với một model vắng mặt.
-Mặc định không tải trọng số; có thể đặt ZIP local hoặc chủ động bật `ALLOW_WEIGHT_DOWNLOAD`.''')
+Mặc định tự tải checkpoint khi thiếu (`ALLOW_WEIGHT_DOWNLOAD=True`), dùng một ZIP/cache chung
+cho SOTS Indoor, SOTS Outdoor và O-HAZY. Có thể đặt `CHECKPOINT_ZIP` local khi Drive bị quota.
+I-HAZE đã hoàn tất ở cùng run sẽ dùng lại trọng số; không cần đổi `RUN_NAME` chỉ để bổ sung checkpoint.''')
 code('MODULE_SOURCES = ' + repr(modules) + '\n' + r'''
 for name, source in MODULE_SOURCES.items():
     ast.parse(source)
@@ -270,7 +275,18 @@ if DATASET_NAME == 'all':
 else:
     CONFIGS = [CONFIG]
 
+# Resolve the shared archive once before starting all jobs. This prevents SOTS
+# Indoor/Outdoor from independently downloading the same checkpoint ZIP.
+checkpoint_ns = {'__name__': 'checkpoint_setup_bootstrap'}
+exec(compile(MODULE_SOURCES['checkpoint_setup.py'], 'checkpoint_setup.py', 'exec'), checkpoint_ns)
+checkpoint_errors = checkpoint_ns['ensure_shared_weights'](
+    CONFIGS, RUN_ROOT/'checkpoints')
+if checkpoint_errors:
+    print('Checkpoint status:', checkpoint_errors, flush=True)
+
 def invoke_job(cfg, action):
+    if action == 'prepare' and cfg['dataset_name'] in checkpoint_errors:
+        raise RuntimeError(checkpoint_errors[cfg['dataset_name']])
     work = Path(cfg['work_root']); work.mkdir(parents=True, exist_ok=True)
     Path(cfg['output_root']).mkdir(parents=True, exist_ok=True)
     for name, source in MODULE_SOURCES.items():
@@ -286,7 +302,9 @@ if RUN_MODE not in ('auto','train','resume','benchmark'): raise ValueError('RUN_
 if DATASET_NAME == 'all':
     SUITE_STATES = prepare_jobs(CONFIGS, invoke_job, OUTPUT_ROOT)
     print('Chuẩn bị:', SUITE_STATES)
+    print(f'Sẵn sàng {sum(s["status"] == "ready" for s in SUITE_STATES)}/{len(CONFIGS)} dataset.', flush=True)
 else:
+    if checkpoint_errors: raise RuntimeError(str(checkpoint_errors))
     run_phase('prepare')
     inputs = json.loads((RUN_ROOT/'inputs.json').read_text(encoding='utf-8'))
     print('Split:', {k:len(v) for k,v in inputs['splits'].items()})
@@ -302,7 +320,16 @@ và model cuối một U-block cộng một depthwise block/group, không chuy�
 Conv–BN fusion chỉ được nhận khi output khớp và latency tốt hơn trên validation hoặc tensor giả.
 Không dùng CUDA Graph để tránh lỗi capture đã gặp. `auto` phục hồi từ last; `benchmark` phục hồi best.
 Mỗi stage mới quay lại best EMA để tránh tiếp tục từ một iterate bị overfit.''')
-code("if DATASET_NAME == 'all':\n    run_jobs(CONFIGS, SUITE_STATES, invoke_job, RUN_MODE, OUTPUT_ROOT)\nelse:\n    run_phase(RUN_MODE)")
+code(r'''
+if DATASET_NAME == 'all':
+    run_jobs(CONFIGS, SUITE_STATES, invoke_job, RUN_MODE, OUTPUT_ROOT)
+    incomplete = [s['dataset'] for s in SUITE_STATES if s['status'] != 'completed']
+    if incomplete:
+        raise RuntimeError('Lượt all chưa hoàn tất: ' + ', '.join(incomplete)
+                           + '. Xem suite_status.json và log; các kết quả đã xong vẫn được giữ.')
+else:
+    run_phase(RUN_MODE)
+''')
 md('''## 5. Báo cáo và metric
 
 **FPS/MSE = FPS / MSE trung bình theo ảnh**, RGB [0,1], cùng crop border với PSNR. Không suy MSE từ
@@ -352,3 +379,60 @@ for cell in nb.cells:
 nbf.validate(nb)
 nbf.write(nb, HERE/'phase4_wavelite_final.ipynb')
 print('Created', HERE/'phase4_wavelite_final.ipynb')
+
+recovery = nbf.v4.new_notebook(metadata={
+    'kernelspec': {'display_name': 'Python 3', 'language': 'python', 'name': 'python3'},
+    'colab': {'name': 'recover_phase4_missing_checkpoints.ipynb'}})
+recovery.cells.append(nbf.v4.new_markdown_cell('''# Khôi phục Phase 4 — checkpoint bị thiếu
+
+Chạy trên **runtime Colab cũ** còn `/content/wdmamba_phase4/all/wavelite_quick_v2`.
+Notebook tải một bộ checkpoint dùng chung, chạy lại các job lỗi bằng source và lịch train
+đã lưu của lần chạy đó. Dataset và kết quả đã hoàn tất được giữ nguyên; I-HAZE đã xong
+không train hoặc benchmark lại. Không cần đổi `RUN_NAME`.
+
+Nếu Google Drive hết quota, đặt `CHECKPOINT_ZIP` tới archive local đã tải sẵn.
+Kết quả tổng hợp sẽ nằm trong `results` của run cũ.'''))
+recovery_sources = {name: (HERE/name).read_text(encoding='utf-8-sig')
+                    for name in ('checkpoint_setup.py', 'recover_phase4.py')}
+recovery.cells.append(nbf.v4.new_code_cell('RECOVERY_SOURCES = ' + repr(recovery_sources) + '\n' + r'''
+from pathlib import Path
+import subprocess
+
+RUN_ROOT = Path('/content/wdmamba_phase4/all/wavelite_quick_v2')
+PYTHON = Path('/content/wdmamba_phase4_env311/bin/python')
+CHECKPOINT_ZIP = ''  # tùy chọn: /content/drive/MyDrive/WDMamba_ckpts.zip
+
+if not (RUN_ROOT/'datasets').is_dir():
+    raise FileNotFoundError('Không còn run cũ. Dùng runtime cũ hoặc khôi phục đầy đủ thư mục kết quả.')
+if not PYTHON.is_file():
+    raise FileNotFoundError('Không có Python GPU của run cũ; sửa PYTHON tới môi trường đã dùng.')
+tools_root = RUN_ROOT/'recovery_tools'; tools_root.mkdir(exist_ok=True)
+for name, source in RECOVERY_SOURCES.items():
+    (tools_root/name).write_text(source, encoding='utf-8')
+args = [str(PYTHON), '-u', str(tools_root/'recover_phase4.py'), str(RUN_ROOT), str(PYTHON), CHECKPOINT_ZIP]
+with subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                      text=True, encoding='utf-8', errors='replace') as proc:
+    try:
+        for line in proc.stdout: print(line, end='', flush=True)
+        rc = proc.wait()
+    except BaseException:
+        proc.kill(); proc.wait(); raise
+if rc: raise subprocess.CalledProcessError(rc, args)
+'''))
+recovery.cells.append(nbf.v4.new_code_cell(r'''
+from IPython.display import Markdown, display
+import shutil
+display(Markdown((RUN_ROOT/'results/final_report_all.md').read_text(encoding='utf-8')))
+archive = shutil.make_archive(str(RUN_ROOT.parent/(RUN_ROOT.name+'_recovered')), 'zip', RUN_ROOT)
+print('Artifact:', archive)
+try:
+    from google.colab import files
+    files.download(archive)
+except ImportError:
+    pass
+'''))
+for cell in recovery.cells:
+    if cell.cell_type == 'code': ast.parse(cell.source)
+nbf.validate(recovery)
+nbf.write(recovery, HERE/'recover_phase4_missing_checkpoints.ipynb')
+print('Created', HERE/'recover_phase4_missing_checkpoints.ipynb')
