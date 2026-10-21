@@ -1,6 +1,8 @@
 ﻿"""Generate a portable Colab notebook with all Phase 4 runner sources embedded."""
 from pathlib import Path
 import ast
+import copy
+import textwrap
 import nbformat as nbf
 
 HERE = Path(__file__).resolve().parent
@@ -436,3 +438,111 @@ for cell in recovery.cells:
 nbf.validate(recovery)
 nbf.write(recovery, HERE/'recover_phase4_missing_checkpoints.ipynb')
 print('Created', HERE/'recover_phase4_missing_checkpoints.ipynb')
+
+fresh = copy.deepcopy(nb)
+fresh.metadata['colab'] = {'name': 'phase4_all_fresh.ipynb'}
+fresh.metadata['wdmamba_phase'] = '4-wavelite-all-fresh-v1'
+fresh.cells[0].source = fresh.cells[0].source.replace(
+    '# Phase 4 — WaveLite-Final', '# Phase 4 — WaveLite-Final / ALL / RUN MỚI')
+fresh.cells[0].source += '''\n\n**Chọn GPU rồi Run all, không cần notebook khôi phục hoặc kết quả cũ.**
+Mỗi lần chạy cell cấu hình tạo một thư mục run mới. Dataset và checkpoint tải về được cache chung.
+SOTS dùng checkpoint RESIDE-6K; O-HAZY tối ưu trọng số cùng miền; I-HAZE train hai model
+khởi tạo ngẫu nhiên độc lập. Nguồn trọng số được ghi trong metadata.
+
+Kiểm tra dataset/checkpoint trước, sau đó kiểm tra môi trường và forward GPU của cả bốn job.
+Chỉ bắt đầu train sau khi cả bốn job sẵn sàng; lỗi chuẩn bị sẽ dừng với thông báo cụ thể.'''
+fresh.cells[1].source += '''\n\nBản chạy mới: `quick` I-HAZE dùng đủ 4.000 bước crop256 + 1.000 bước ảnh đầy đủ
+cho mỗi model, chọn checkpoint tốt nhất bằng validation. Không dừng ở 1.700 bước như lượt cũ.
+`standard` vẫn có early stopping. SOTS không tự tải ITS/OTS train vì lượt nhanh chỉ benchmark.
+Để các đường dẫn checkpoint trống nếu muốn tự tải archive; chỉ điền khi đã có file local.'''
+setup = fresh.cells[2]
+setup.source = setup.source.replace(
+    "RUN_NAME = 'wavelite_quick_v2'  # run mới, không ghi đè phase 4 cũ",
+    "from datetime import datetime, timezone\nfrom uuid import uuid4\n"
+    "RUN_NAME = 'wavelite_all_' + datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S') + '_' + uuid4().hex[:6]\n"
+    "SHARED_WEIGHT_ROOT = Path('/content/wdmamba_phase4/shared_checkpoints')")
+setup.source = setup.source.replace("Path('/content/wdmamba_phase4') / DATASET_NAME / RUN_NAME",
+                                    "Path('/content/wdmamba_phase4_new') / DATASET_NAME / RUN_NAME")
+setup.source = setup.source.replace("continue_on_error=DATASET_NAME == 'all'", "continue_on_error=False")
+# Checkpoints and datasets are resolved in the notebook kernel, before building the CUDA environment.
+runner_source = fresh.cells[6].source
+bootstrap, invocation = runner_source.split('def invoke_job(cfg, action):', 1)
+bootstrap = bootstrap.replace('from phase4_batch import make_configs, prepare_jobs, run_jobs, collect_reports',
+    "batch_ns = {'__name__': 'fresh_batch'}\n"
+    "exec(compile(MODULE_SOURCES['phase4_batch.py'], 'phase4_batch.py', 'exec'), batch_ns)\n"
+    "make_configs, prepare_jobs, run_jobs, collect_reports = [batch_ns[k] for k in "
+    "('make_configs','prepare_jobs','run_jobs','collect_reports')]")
+bootstrap = bootstrap.replace("# Resolve the shared archive once", """for cfg in CONFIGS:
+    if cfg['dataset_name'] == 'i-haze' and PRESET == 'quick':
+        cfg['val_every'] = 200
+        cfg['patience'] = 30  # > all validation checks in either quick stage
+
+# Resolve the shared archive once""")
+bootstrap = bootstrap.replace("CONFIGS, RUN_ROOT/'checkpoints'", "CONFIGS, SHARED_WEIGHT_ROOT")
+bootstrap += '''
+if checkpoint_errors:
+    raise RuntimeError('Chưa đủ checkpoint, chưa bắt đầu train: ' + json.dumps(checkpoint_errors, ensure_ascii=False))
+print('Đã chuẩn bị checkpoint cho toàn bộ dataset được chọn.', flush=True)
+'''
+preflight = r'''
+import json, sys
+from pathlib import Path
+import torch
+cfg_path = Path(sys.argv[1]); sys.path.insert(0, str(cfg_path.parent))
+import phase4_arch as arch
+import phase4_runner as runner
+cfg = json.loads(cfg_path.read_text(encoding='utf-8'))
+inputs = json.loads(cfg_path.with_name('inputs.json').read_text(encoding='utf-8'))
+runner.configure(cfg)
+ref = arch.reference_model(cfg['repo_root'], inputs['source'] or None, depth=cfg['reference_depth'])
+models = [ref]
+if cfg['dataset_name'] == 'i-haze':
+    models.append(arch.skeleton(cfg['repo_root'], {'kind':'final','depth':1,'feature_adapter':True,'detail_width':cfg['detail_width']}))
+elif not (inputs['evaluation_only'] or cfg['dataset_name'] in cfg.get('runtime_only_datasets', [])):
+    start = arch.reference_model(cfg['repo_root'], inputs['student_source']) if inputs['student_source'] else ref
+    models.append(arch.final_from_reference(start, cfg['den_blocks'], cfg['detail_width'])[0])
+probe = torch.rand(1, 3, 256, 256, device=cfg['device'])
+for model in models:
+    model.to(cfg['device']).eval()
+    with torch.no_grad(): result = model(probe)
+    if result.shape != probe.shape or not torch.isfinite(result).all():
+        raise RuntimeError('Forward smoke test không hợp lệ.')
+    model.cpu()
+print('PREFLIGHT PASS:', cfg['dataset_name'], 'checkpoint strict + forward GPU', flush=True)
+'''
+invocation = ('ARCH_PREFLIGHT_SOURCE = ' + repr(textwrap.dedent(preflight))
+    + "\nARCH_PREFLIGHT_PATH = RUN_ROOT/'fresh_preflight.py'\n"
+    + "ARCH_PREFLIGHT_PATH.write_text(ARCH_PREFLIGHT_SOURCE, encoding='utf-8')\n\n"
+    + 'def invoke_job(cfg, action):' + invocation)
+invocation = invocation.replace("            log=cfg['dataset_name']+'_'+action+'.log')",
+    "            log=cfg['dataset_name']+'_'+action+'.log')\n"
+    "    if action == 'prepare':\n"
+    "        command([PYTHON, '-u', ARCH_PREFLIGHT_PATH, config_path], cwd=work,\n"
+    "                log=cfg['dataset_name']+'_preflight.log')")
+invocation = invocation.replace("    print('Chuẩn bị:', SUITE_STATES)",
+    "    print('Chuẩn bị:', SUITE_STATES)\n"
+    "    failed = [s for s in SUITE_STATES if s['status'] != 'ready']\n"
+    "    if failed:\n"
+    "        collect_reports(CONFIGS, SUITE_STATES, OUTPUT_ROOT)\n"
+    "        raise RuntimeError('Chưa đủ dataset sẵn sàng, chưa bắt đầu train. Xem log và suite_status.json: ' +\n"
+    "                           ', '.join(s['dataset'] for s in failed))")
+invocation = invocation.replace("    run_phase('prepare')",
+    "    invoke_job(CONFIG, 'prepare')")
+# Reorder the standalone notebook: inputs/checkpoints -> CUDA env -> all-job preflight -> training.
+fresh.cells = [
+    fresh.cells[0], fresh.cells[1], setup,
+    nbf.v4.new_markdown_cell('## 2. Checkpoint dùng chung\n\nTự dò file local hoặc tải một archive cho SOTS/O-HAZY. I-HAZE không cần checkpoint.\nNếu Drive lỗi/quota, dừng ở đây và điền `CHECKPOINT_ZIP` local; chưa có model nào được train.'),
+    nbf.v4.new_code_cell(bootstrap),
+    nbf.v4.new_markdown_cell('## 3. Môi trường CUDA/Mamba\n\nTự cài môi trường nếu chưa có; tái dùng môi trường hợp lệ không tái dùng kết quả model cũ.'),
+    fresh.cells[4],
+    nbf.v4.new_markdown_cell('## 4. Kiểm tra toàn bộ job trước khi train\n\nKiểm tra split, nguồn trọng số, nạp strict và forward tensor giả trên GPU. Cả bốn bộ phải sẵn sàng.\nTest không được dùng chọn model hoặc runtime.'),
+    nbf.v4.new_code_cell(invocation),
+    nbf.v4.new_markdown_cell('## 5. Train, tối ưu runtime và đánh giá\n\nChạy đủ bốn bộ theo thứ tự SOTS Indoor → SOTS Outdoor → O-HAZY → I-HAZE.\nLỗi một job được lưu, các job khác tiếp tục; cuối lượt sẽ báo chưa hoàn tất nếu thiếu bộ nào.'),
+    fresh.cells[8], fresh.cells[9], fresh.cells[10], fresh.cells[11], fresh.cells[12]]
+fresh.cells[11].source = fresh.cells[11].source.replace('## 5.', '## 6.')
+fresh.cells[13].source = fresh.cells[13].source.replace('## 6.', '## 7.')
+for cell in fresh.cells:
+    if cell.cell_type == 'code': ast.parse(cell.source)
+nbf.validate(fresh)
+nbf.write(fresh, HERE/'phase4_all_fresh.ipynb')
+print('Created', HERE/'phase4_all_fresh.ipynb')

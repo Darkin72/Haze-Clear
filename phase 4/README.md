@@ -1,6 +1,20 @@
 ﻿# Phase 4 — WaveLite-Final
 
-Mở [phase4_wavelite_final.ipynb](phase4_wavelite_final.ipynb) trên Colab/Linux GPU.
+Notebook chạy mới: **[phase4_all_fresh.ipynb](phase4_all_fresh.ipynb)**.
+Chọn GPU trên Colab rồi Run all. Mặc định `DATASET_NAME='all'`, `PRESET='quick'`,
+`AUTO_DOWNLOAD_DATASETS=True`, `ALLOW_WEIGHT_DOWNLOAD=True`; có thể để trống các đường dẫn.
+SOTS tải một lần qua KaggleHub; O-HAZY/I-HAZE lấy từ VDT_GD2; checkpoint SOTS/O-HAZY tải
+từ archive Google Drive và dùng cache chung. `CHECKPOINT_ZIP` local là lựa chọn khi Drive hết quota.
+
+Mỗi lần chạy cell cấu hình tạo run mới dưới `/content/wdmamba_phase4_new/all/`, không đọc
+model/kết quả từ run Phase 4 cũ. Môi trường và dữ liệu tải về vẫn có thể tái sử dụng.
+Notebook kiểm tra đủ checkpoint trước khi cài môi trường CUDA, rồi kiểm tra split, nạp
+strict và forward GPU cho cả bốn job trước khi train. Nếu thiếu bộ nào, nó dừng trước train.
+I-HAZE `quick` chạy đủ 5.000 bước mỗi model, chọn best bằng validation; SOTS chỉ tối ưu runtime,
+O-HAZY tối ưu từ trọng số cùng miền. Report giữ PSNR, SSIM, MSE, FPS, GFLOPs và FPS/MSE.
+Chất lượng và tốc độ của lượt mới cần được đo trên GPU.
+
+Notebook cũ [phase4_wavelite_final.ipynb](phase4_wavelite_final.ipynb) vẫn dùng trên Colab/Linux GPU.
 Notebook tự chứa runner. **Chỉ O-HAZY và I-HAZE có sẵn trong VDT_GD2**;
 RESIDE-6K và SOTS được tự tải qua KaggleHub khi chưa có bản local.
 
@@ -65,7 +79,7 @@ CHECKPOINTS = {'o-hazy': '', 'sots-its': '', 'sots-ots': '', 'reside6k': ''}
 STUDENT_CHECKPOINT = ''
 CHECKPOINT_ZIP = ''
 CHECKPOINT_SEARCH_ROOTS = [...]
-ALLOW_WEIGHT_DOWNLOAD = False
+ALLOW_WEIGHT_DOWNLOAD = True
 RUN_MODE = 'auto'  # auto | train | resume | benchmark
 ```
 
@@ -152,6 +166,7 @@ Các kiểm thử dùng mô hình nhỏ để kiểm tra luồng train/resume/fu
 forward/backward CUDA của WDMamba. Máy cục bộ hiện chỉ có PyTorch CPU, nên chưa có kết quả
 GPU Phase 4. Không có bảng PSNR/FPS giả hoặc giá trị mượn từ phase cũ.
 
-Kiểm thử hiện tại: 27/27 đạt, gồm tải và cache dataset, resume sau gián đoạn cho kết quả khớp từng trọng số với
+Kiểm thử hiện tại: 33/33 đạt, gồm tải và cache dataset/checkpoint, notebook chạy mới và
+chặn train khi một job chưa sẵn sàng, resume sau gián đoạn cho kết quả khớp từng trọng số với
 lượt liên tục, phục hồi benchmark không gọi train, xuất/nạp eager, và SOTS runtime-only
 không gọi train hoặc cắt block. Notebook đã kiểm tra schema, cú pháp và source nhúng.

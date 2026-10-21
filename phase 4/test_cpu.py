@@ -19,6 +19,7 @@ import phase4_runner as runner
 from phase4_profile import profile_gflops
 import phase4_batch as batch
 import phase4_download as downloads
+import checkpoint_setup as checkpoints
 
 torch.set_num_threads(1)
 HERE = Path(__file__).resolve().parent
@@ -430,6 +431,151 @@ class DatasetDownloadTests(unittest.TestCase):
                 continue_on_error=True)
             self.assertIn('o-hazy', resolved)
             self.assertEqual(errors, {'sots-its': 'quota'})
+
+
+class CheckpointBootstrapTests(unittest.TestCase):
+    @staticmethod
+    def configs(root):
+        return batch.make_configs({'project_root': str(root/'project'), 'repo_root': str(root/'repo'),
+                                   'preset': 'quick', 'allow_weight_download': True},
+                                  data.DATASET_SPECS, root/'run')
+
+    @staticmethod
+    def bundle():
+        import zipfile
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, 'w') as z:
+            for filename in set(checkpoints.WEIGHT_NAMES.values()):
+                z.writestr('WDMamba_ckpts/'+filename, b'checkpoint fixture')
+        return buffer.getvalue()
+
+    def test_archive_downloaded_once_and_reused_by_all_three_runners(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); cfgs = self.configs(root)
+            callback = unittest.mock.Mock(side_effect=lambda p: p.write_bytes(self.bundle()))
+            self.assertEqual(checkpoints.ensure_shared_weights(cfgs, root/'cache', callback), {})
+            callback.assert_called_once()
+            for cfg in cfgs:
+                path = runner.resolve_source(cfg)
+                if cfg['dataset_name'] == 'i-haze':
+                    self.assertIsNone(path)
+                else:
+                    self.assertEqual(path.name, checkpoints.WEIGHT_NAMES[cfg['dataset_name']])
+                    self.assertTrue(path.is_relative_to((root/'cache').resolve()))
+            fail = unittest.mock.Mock(side_effect=AssertionError('downloaded twice'))
+            self.assertEqual(checkpoints.ensure_shared_weights(cfgs, root/'cache', fail), {})
+            fail.assert_not_called()
+
+    def test_local_zip_works_with_network_disabled(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); cfgs = self.configs(root)
+            archive = root/'local.zip'; archive.write_bytes(self.bundle())
+            for cfg in cfgs:
+                cfg.update(checkpoint_zip=str(archive), allow_weight_download=False)
+            fail = unittest.mock.Mock(side_effect=AssertionError('unexpected network'))
+            self.assertEqual(checkpoints.ensure_shared_weights(cfgs, root/'cache', fail), {})
+            fail.assert_not_called()
+
+    def test_invalid_download_and_zip_traversal_fail_before_training(self):
+        import zipfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); cfgs = self.configs(root)
+            errors = checkpoints.ensure_shared_weights(cfgs, root/'bad_cache',
+                lambda p: p.write_bytes(b'<html>quota</html>'))
+            self.assertEqual(set(errors), {'sots-its', 'sots-ots', 'o-hazy'})
+            archive = root/'unsafe.zip'
+            with zipfile.ZipFile(archive, 'w') as z: z.writestr('../outside.pth', b'unsafe')
+            for cfg in cfgs: cfg['checkpoint_zip'] = str(archive)
+            errors = checkpoints.ensure_shared_weights(cfgs, root/'safe_cache')
+            self.assertEqual(set(errors), {'sots-its', 'sots-ots', 'o-hazy'})
+            self.assertFalse((root/'safe_cache/outside.pth').exists())
+
+
+class FreshNotebookTests(unittest.TestCase):
+    def notebook(self):
+        import nbformat
+        nb = nbformat.read(HERE/'phase4_all_fresh.ipynb', as_version=4)
+        nbformat.validate(nb)
+        return nb
+
+    def setup_namespace(self, root):
+        project = root/'project'; project.mkdir(exist_ok=True)
+        repo = root/'repo'; (repo/'basicsr/archs').mkdir(parents=True, exist_ok=True)
+        (repo/'basicsr/archs/wavemamba_arch.py').write_text('# layout fixture', encoding='utf-8')
+        overrides = {}
+        for name in batch.ALL_DATASETS:
+            directory = root/'data'/name; directory.mkdir(parents=True, exist_ok=True)
+            overrides[name] = str(directory)
+        weights = project/'weights'; weights.mkdir(exist_ok=True)
+        for filename in set(checkpoints.WEIGHT_NAMES.values()):
+            (weights/filename).write_bytes(b'path-only fixture')
+        edits = {'LOCAL_PROJECT': str(project), 'ARCH_ROOT_OVERRIDE': str(repo),
+                 'DATA_ROOT_OVERRIDES': overrides}
+
+        class LocalPaths(ast.NodeTransformer):
+            def visit_Assign(self, node):
+                if len(node.targets) == 1 and isinstance(node.targets[0], ast.Name) and node.targets[0].id in edits:
+                    node.value = ast.parse(repr(edits[node.targets[0].id]), mode='eval').body
+                return self.generic_visit(node)
+
+            def visit_Constant(self, node):
+                if isinstance(node.value, str) and node.value.startswith('/content/'):
+                    return ast.copy_location(ast.Constant(str(root/'content'/node.value[len('/content/'):])), node)
+                return node
+
+        tree = LocalPaths().visit(ast.parse(self.notebook().cells[2].source))
+        ast.fix_missing_locations(tree)
+        ns = {'__name__': 'fresh_notebook_test'}
+        with patch('platform.system', return_value='Linux'), \
+             patch('subprocess.Popen', side_effect=AssertionError('unexpected network/process')), \
+             contextlib.redirect_stdout(io.StringIO()):
+            exec(compile(tree, 'fresh_setup', 'exec'), ns)
+            exec(self.notebook().cells[4].source, ns)
+        return ns
+
+    def test_schema_embedded_sources_and_isolated_run_defaults(self):
+        nb = self.notebook()
+        for cell in nb.cells:
+            if cell.cell_type == 'code': ast.parse(cell.source)
+        modules = ast.literal_eval(ast.parse(nb.cells[4].source).body[0].value)
+        for name, source in modules.items():
+            self.assertEqual(source, (HERE/name).read_text(encoding='utf-8-sig'))
+        with tempfile.TemporaryDirectory() as tmp:
+            first = self.setup_namespace(Path(tmp)); second = self.setup_namespace(Path(tmp))
+            self.assertNotEqual(first['RUN_ROOT'], second['RUN_ROOT'])
+            self.assertEqual(first['DATASET_NAME'], 'all')
+            self.assertTrue(first['AUTO_DOWNLOAD_DATASETS'])
+            self.assertTrue(first['ALLOW_WEIGHT_DOWNLOAD'])
+            self.assertEqual([c['dataset_name'] for c in first['CONFIGS']], list(batch.ALL_DATASETS))
+            ih = next(c for c in first['CONFIGS'] if c['dataset_name'] == 'i-haze')
+            self.assertEqual(sum(s['steps'] for s in ih['scratch_schedule']), 5000)
+            self.assertGreater(ih['patience']*ih['val_every'], max(s['steps'] for s in ih['scratch_schedule']))
+
+    def test_one_failed_prepare_blocks_training_for_every_dataset(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ns = self.setup_namespace(Path(tmp)); calls = []
+
+            def command(args, **kwargs):
+                calls.append(list(map(str, args)))
+                if str(args[-1]) == 'prepare' and 'sots-its' in str(args[-2]):
+                    raise RuntimeError('simulated missing checkpoint')
+
+            ns.update(PYTHON=Path('fake-python'), command=command)
+            with contextlib.redirect_stdout(io.StringIO()), self.assertRaisesRegex(RuntimeError, 'sots-its'):
+                exec(self.notebook().cells[8].source, ns)
+            self.assertEqual(ns['SUITE_STATES'][0]['status'], 'prepare_failed')
+            self.assertEqual(len(ns['SUITE_STATES']), 4)
+            self.assertFalse(any(args[-1] in ('auto', 'train', 'resume') for args in calls))
+
+    def test_all_prepared_jobs_include_gpu_probe_before_training(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ns = self.setup_namespace(Path(tmp)); calls = []
+            ns.update(PYTHON=Path('fake-python'), command=lambda args, **kw: calls.append(list(map(str, args))))
+            with contextlib.redirect_stdout(io.StringIO()): exec(self.notebook().cells[8].source, ns)
+            self.assertEqual([s['status'] for s in ns['SUITE_STATES']], ['ready']*4)
+            self.assertEqual(len(calls), 8)  # prepare and GPU forward for each dataset
+            self.assertEqual(sum('fresh_preflight.py' in args[-2] for args in calls), 4)
+            ast.parse(ns['ARCH_PREFLIGHT_SOURCE'])
 
 
 if __name__=='__main__': unittest.main()
