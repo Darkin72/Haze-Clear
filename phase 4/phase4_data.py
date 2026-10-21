@@ -173,6 +173,9 @@ def partition(pairs, cfg):
         if dataset_name.startswith('sots-'):
             # Some repackaged SOTS have train/val folders. They are still benchmark test images.
             result = {'train': [], 'val': [], 'test': list(pairs)}
+        elif dataset_name == 'reside6k' and cfg.get('eval_only') and explicit == {None}:
+            # A downloaded test/clear + test/hazy root is flat relative to itself.
+            result = {'train': [], 'val': [], 'test': list(pairs)}
         elif explicit == {None}:
             raise ValueError('Dataset train cần thư mục train và test; không tự lấy test làm validation.')
         else:

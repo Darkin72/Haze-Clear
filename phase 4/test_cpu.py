@@ -18,6 +18,7 @@ import phase4_arch as arch
 import phase4_runner as runner
 from phase4_profile import profile_gflops
 import phase4_batch as batch
+import phase4_download as downloads
 
 torch.set_num_threads(1)
 HERE = Path(__file__).resolve().parent
@@ -353,6 +354,82 @@ class Phase4Tests(unittest.TestCase):
             self.assertTrue((output/'report.html').is_file())
             self.assertTrue((output/'protocol_report.md').is_file())
             self.assertIn('FPS/MSE',(output/'final_report.md').read_text(encoding='utf-8'))
+
+
+class DatasetDownloadTests(unittest.TestCase):
+    @staticmethod
+    def pair_dirs(root):
+        root = Path(root)
+        for side in ('GT', 'hazy'):
+            target = root/side
+            target.mkdir(parents=True)
+            (target/'1.png').write_bytes(b'layout fixture')
+        return root
+
+    def test_sots_single_download_and_persistent_cache_for_both_domains(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for domain in ('indoor', 'outdoor'):
+                self.pair_dirs(root/'download'/'SOTS'/domain)
+            callback = unittest.mock.Mock(return_value=root/'download')
+            names = ['sots-its', 'sots-ots']
+            resolved, errors = downloads.resolve_datasets(names, data.DATASET_SPECS,
+                root/'project', {}, root/'cache', download=callback)
+            self.assertEqual(errors, {})
+            callback.assert_called_once_with('balraj98/synthetic-objective-testing-set-sots-reside')
+            self.assertEqual(Path(resolved['sots-its']).name, 'indoor')
+            self.assertEqual(Path(resolved['sots-ots']).name, 'outdoor')
+            again, _ = downloads.resolve_datasets(names, data.DATASET_SPECS,
+                root/'project', {}, root/'cache', allow_download=False,
+                download=unittest.mock.Mock(side_effect=AssertionError('downloaded twice')))
+            self.assertEqual(again, resolved)
+
+    def test_repo_datasets_and_explicit_override_never_download(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for name in ('o-hazy', 'i-haze'):
+                (root/data.DATASET_SPECS[name]['relative_root']).mkdir(parents=True)
+            override = root/'custom'; override.mkdir()
+            callback = unittest.mock.Mock(side_effect=AssertionError('unexpected download'))
+            resolved, _ = downloads.resolve_datasets(['o-hazy', 'i-haze', 'sots-its'], data.DATASET_SPECS,
+                root, {'sots-its': str(override)}, root/'cache', download=callback)
+            self.assertEqual(len(resolved), 3)
+            callback.assert_not_called()
+            with self.assertRaises(FileNotFoundError):
+                downloads.resolve_datasets(['sots-its'], data.DATASET_SPECS, root,
+                    {'sots-its': str(root/'typo')}, root/'cache', download=callback)
+
+    def test_reside_quick_selects_only_test_and_standard_keeps_full_layout(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); base = root/'download'/'RESIDE-6K'
+            self.pair_dirs(base/'train'); self.pair_dirs(base/'test')
+            callback = unittest.mock.Mock(return_value=root/'download')
+            quick, _ = downloads.resolve_datasets(['reside6k'], data.DATASET_SPECS,
+                root/'project', {}, root/'cache', test_only=True, download=callback)
+            self.assertEqual(Path(quick['reside6k']), (base/'test').resolve())
+            rows = data.collect_pairs(quick['reside6k'], 'reside6k')
+            splits = data.partition(rows, {'dataset_name': 'reside6k', 'eval_only': True})
+            self.assertEqual([len(splits[k]) for k in ('train', 'val', 'test')], [0, 0, 1])
+            standard, _ = downloads.resolve_datasets(['reside6k'], data.DATASET_SPECS,
+                root/'project', {}, root/'cache', test_only=False, download=callback)
+            self.assertEqual(Path(standard['reside6k']), base.resolve())
+            callback.assert_called_once_with('kmljts/reside-6k')
+
+    def test_missing_reside_test_never_substitutes_training_images(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.pair_dirs(Path(tmp)/'train')
+            with self.assertRaises(FileNotFoundError):
+                downloads.find_dataset(tmp, 'reside6k', test_only=True)
+
+    def test_all_dataset_download_error_keeps_local_jobs_available(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root/data.DATASET_SPECS['o-hazy']['relative_root']).mkdir(parents=True)
+            resolved, errors = downloads.resolve_datasets(['sots-its', 'o-hazy'], data.DATASET_SPECS,
+                root, {}, root/'cache', download=unittest.mock.Mock(side_effect=RuntimeError('quota')),
+                continue_on_error=True)
+            self.assertIn('o-hazy', resolved)
+            self.assertEqual(errors, {'sots-its': 'quota'})
 
 
 if __name__=='__main__': unittest.main()

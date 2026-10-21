@@ -22,7 +22,8 @@ với ba nhánh FFT + attention → residual depthwise detail → RGB**.
 Giữ năng lực khôi phục ngữ cảnh của WDMamba; giảm lặp ở DEN để tăng FPS; bổ sung detail adapter nhỏ.
 Mục tiêu đo: **ΔPSNR ≥ −0,30 dB**, **FPS ≥ 2×**, FPS 256 ≥ 1,10× và FPS/MSE không giảm so tham chiếu.
 Đây là điều kiện kiểm tra, chưa phải kết quả đạt được. Test không quyết định trọng số hoặc runtime.
-Notebook chứa toàn bộ runner; dùng dataset đã có trong checkout và không tải ZIP dataset.''')
+Notebook chứa toàn bộ runner. O-HAZY và I-HAZE dùng bản có sẵn trong VDT_GD2;
+RESIDE-6K và SOTS tự tải qua KaggleHub khi chưa có dữ liệu local.''')
 md('''## 1. Chọn dataset, đường dẫn và artifact
 
 `PRESET` chọn lịch chạy: `quick` giảm thời gian train/benchmark, `standard` dùng lịch dài hơn.
@@ -43,8 +44,10 @@ Preset `quick` ưu tiên thời gian: RESIDE/SOTS nạp chung checkpoint RESIDE-
 I-HAZE vẫn khởi tạo ngẫu nhiên hai model độc lập để so sánh.
 SOTS chuẩn là benchmark test. Không có `TRAIN_ROOT` ITS/OTS riêng thì chỉ thử fusion trên model đầy đủ,
 không cắt block mà thiếu bước phục hồi chất lượng. `DATA_ROOT_OVERRIDE` và `CHECKPOINTS` cho phép dùng
-các file đã có trên Drive hoặc runtime cũ. `RUN_MODE='auto'` tiếp tục lượt dở hoặc benchmark lượt đã xong.''')
-code("DATASET_SPECS = " + repr(specs) + '\n' + r'''
+các file đã có trên Drive hoặc runtime cũ. `AUTO_DOWNLOAD_DATASETS=True` tự tải RESIDE-6K/SOTS
+khi thiếu, tái dùng cache cho các lượt sau. SOTS chỉ tải một lần cho Indoor/Outdoor.
+`RUN_MODE='auto'` tiếp tục lượt dở hoặc benchmark lượt đã xong.''')
+code("DATA_DOWNLOAD_SOURCE = " + repr(modules['phase4_download.py']) + '\nDATASET_SPECS = ' + repr(specs) + '\n' + r'''
 from pathlib import Path
 import ast, json, os, platform, subprocess, sys
 
@@ -52,9 +55,13 @@ DATASET_NAME = 'all'  # @param ['all','o-hazy','sots-its','sots-ots','i-haze','r
 PRESET = 'quick'        # @param ['quick','standard']
 LOCAL_PROJECT = ''
 ARCH_ROOT_OVERRIDE = ''  # checkout WDMamba đã có; để trống sẽ tự clone
-ARCH_REPO_URL = 'https://github.com/Darkin72/WDMamba.git'
+ARCH_REPO_URL = 'https://github.com/Darkin72/Haze-Clear.git'
 DATA_ROOT_OVERRIDE = ''
-DATA_ROOT_OVERRIDES = {'sots-its':'', 'sots-ots':'', 'o-hazy':'', 'i-haze':''}  # dùng khi all
+DATA_ROOT_OVERRIDES = {'sots-its':'', 'sots-ots':'', 'o-hazy':'', 'i-haze':'', 'reside6k':''}  # dùng khi all
+AUTO_DOWNLOAD_DATASETS = True  # tải RESIDE-6K/SOTS khi chưa có đường dẫn local
+KAGGLE_RESIDE6K_DATASET = 'kmljts/reside-6k'
+KAGGLE_SOTS_DATASET = 'balraj98/synthetic-objective-testing-set-sots-reside'
+DATA_DOWNLOAD_ROOT = '/content/wdmamba_phase4/datasets_cache'
 TRAIN_ROOT = ''             # ITS/OTS train riêng, tách khỏi benchmark SOTS
 TRAIN_ROOTS = {'sots-its':'', 'sots-ots':''}  # dùng khi all + standard
 EVAL_ONLY = None            # None tự nhận diện; False bắt buộc train/val
@@ -66,7 +73,7 @@ CHECKPOINT_SEARCH_ROOTS = [
     '/content/wdmamba_o_hazy_final/weights', '/content/wdmamba_v2',
     '/content/wdmamba_sots', '/content/WDMamba_ckpts',
 ]
-ALLOW_WEIGHT_DOWNLOAD = False  # chỉ tải trọng số nếu chủ động bật; không tải dataset
+ALLOW_WEIGHT_DOWNLOAD = False  # cờ riêng cho trọng số; dataset dùng AUTO_DOWNLOAD_DATASETS
 RUN_NAME = 'wavelite_quick_v2'  # run mới, không ghi đè phase 4 cũ
 RUN_MODE = 'auto'           # auto | train | resume | benchmark
 EVAL_MAX_SIDE = 768         # 0 = kích thước gốc; giữ 768 khi đối chiếu các phase cũ
@@ -101,16 +108,37 @@ if not PROJECT_ROOT.exists():
     command(['git','clone','--depth','1','--filter=blob:none','--sparse',
              'https://github.com/Darkin72/VDT_GD2.git',PROJECT_ROOT])
     command(['git','sparse-checkout','set','--skip-checks',
-             *[DATASET_SPECS[name]['relative_root'] for name in ACTIVE_DATASETS],
+             *[DATASET_SPECS[name]['relative_root'] for name in ACTIVE_DATASETS if name in {'o-hazy','i-haze'}],
              'solution/Haze Clear'], cwd=PROJECT_ROOT)
 DATA_ROOT = Path(DATA_ROOT_OVERRIDE).expanduser().resolve() if DATA_ROOT_OVERRIDE else PROJECT_ROOT/SPEC['relative_root']
 if (PROJECT_ROOT/'.git/info/sparse-checkout').is_file():
+    # Chỉ O-HAZY/I-HAZE nằm trong VDT_GD2; RESIDE-6K và SOTS lấy từ KaggleHub.
     missing = [DATASET_SPECS[name]['relative_root'] for name in ACTIVE_DATASETS
+               if name in {'o-hazy', 'i-haze'}
                if not (PROJECT_ROOT/DATASET_SPECS[name]['relative_root']).is_dir()
                and not (DATA_ROOT_OVERRIDES.get(name) if DATASET_NAME == 'all' else DATA_ROOT_OVERRIDE)]
     if missing: command(['git','sparse-checkout','add','--skip-checks',*missing], cwd=PROJECT_ROOT)
-if not DATA_ROOT.is_dir() and DATASET_NAME != 'all':
-    raise FileNotFoundError(f'Không có {DATASET_NAME} tại {DATA_ROOT}. Đặt DATA_ROOT_OVERRIDE tới dataset đã có.')
+
+dataset_loader = {'__name__': 'phase4_download_bootstrap'}
+exec(compile(DATA_DOWNLOAD_SOURCE, 'phase4_download.py', 'exec'), dataset_loader)
+
+def download_dataset(handle):
+    try:
+        import kagglehub
+    except ImportError:
+        command([sys.executable, '-m', 'pip', 'install', '-q', 'kagglehub'], log='dataset_download.log')
+        import kagglehub
+    return kagglehub.dataset_download(handle)
+
+data_overrides = dict(DATA_ROOT_OVERRIDES) if DATASET_NAME == 'all' else {DATASET_NAME: DATA_ROOT_OVERRIDE}
+RESOLVED_DATA_ROOTS, DATASET_ERRORS = dataset_loader['resolve_datasets'](
+    ACTIVE_DATASETS, DATASET_SPECS, PROJECT_ROOT, data_overrides, DATA_DOWNLOAD_ROOT,
+    allow_download=AUTO_DOWNLOAD_DATASETS, test_only=PRESET == 'quick', download=download_dataset,
+    reside_handle=KAGGLE_RESIDE6K_DATASET, sots_handle=KAGGLE_SOTS_DATASET,
+    continue_on_error=DATASET_NAME == 'all')
+DATA_ROOT = Path(RESOLVED_DATA_ROOTS.get(ACTIVE_DATASETS[0], PROJECT_ROOT/SPEC['relative_root']))
+if DATASET_NAME == 'all':
+    DATA_ROOT_OVERRIDES.update(RESOLVED_DATA_ROOTS)
 LOCAL_ARCH = Path(ARCH_ROOT_OVERRIDE).expanduser().resolve() if ARCH_ROOT_OVERRIDE else PROJECT_ROOT/'solution/Haze Clear'
 REPO_ROOT = LOCAL_ARCH
 if not (REPO_ROOT/'basicsr/archs/wavemamba_arch.py').is_file():
@@ -163,7 +191,7 @@ if PRESET == 'quick':
         {'steps':4000, 'crop':256, 'accum':1, 'lr':2e-4},
         {'steps':1000, 'crop':0, 'accum':1, 'lr':2e-5}]
     CONFIG['reference_schedule'] = list(CONFIG['scratch_schedule'])
-    if DATASET_NAME in ('sots-its', 'sots-ots'):
+    if DATASET_NAME in ('reside6k', 'sots-its', 'sots-ots'):
         # SOTS is evaluated with the RESIDE-6K checkpoint; never fine-tune on
         # SOTS images in the quick path, even when TRAIN_ROOT is present.
         CONFIG['eval_only'] = True

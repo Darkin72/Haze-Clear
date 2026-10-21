@@ -1,11 +1,24 @@
 ﻿# Phase 4 — WaveLite-Final
 
 Mở [phase4_wavelite_final.ipynb](phase4_wavelite_final.ipynb) trên Colab/Linux GPU.
-Notebook tự chứa runner và dùng dữ liệu trong checkout; không tải lại ZIP dataset.
+Notebook tự chứa runner. **Chỉ O-HAZY và I-HAZE có sẵn trong VDT_GD2**;
+RESIDE-6K và SOTS được tự tải qua KaggleHub khi chưa có bản local.
 
-Repo mã nguồn của Haze Clear là [`Darkin72/WDMamba`](https://github.com/Darkin72/WDMamba).
+```python
+AUTO_DOWNLOAD_DATASETS = True
+KAGGLE_RESIDE6K_DATASET = 'kmljts/reside-6k'
+KAGGLE_SOTS_DATASET = 'balraj98/synthetic-objective-testing-set-sots-reside'
+```
+
+SOTS tải một lần dùng chung cho Indoor/Outdoor, các lượt sau tái dùng cache KaggleHub và
+manifest `datasets_cache/downloads.json`. Đường dẫn `DATA_ROOT_OVERRIDE(S)` luôn được ưu tiên;
+đường dẫn nhập sai sẽ báo lỗi để sửa, không tự tải thay thế. Repo Git chỉ sparse-checkout
+O-HAZY/I-HAZE. RESIDE-6K `quick` dùng test để đánh giá, không tải ITS/OTS train riêng.
+KaggleHub có thể yêu cầu xác thực nếu nguồn dữ liệu yêu cầu; lỗi tải được ghi rõ trong log.
+
+Repo mã nguồn của Haze Clear là [`Darkin72/Haze-Clear`](https://github.com/Darkin72/Haze-Clear).
 Notebook tự nhận diện `solution/Haze Clear` nếu đã checkout chung với dataset; khi không có,
-notebook clone repo `WDMamba` vào `/content/WDMamba` và dùng thư mục đó cho kiến trúc.
+notebook clone repo `Haze-Clear` vào `/content/WDMamba` và dùng thư mục đó cho kiến trúc.
 Dataset vẫn lấy từ `VDT_GD2` hoặc các đường dẫn `DATA_ROOT_OVERRIDE(S)` đã điền.
 Nếu đã clone mã nguồn ở vị trí khác, đặt `ARCH_ROOT_OVERRIDE` ở cell cấu hình.
 
@@ -139,6 +152,6 @@ Các kiểm thử dùng mô hình nhỏ để kiểm tra luồng train/resume/fu
 forward/backward CUDA của WDMamba. Máy cục bộ hiện chỉ có PyTorch CPU, nên chưa có kết quả
 GPU Phase 4. Không có bảng PSNR/FPS giả hoặc giá trị mượn từ phase cũ.
 
-Kiểm thử hiện tại: 22/22 đạt, gồm resume sau gián đoạn cho kết quả khớp từng trọng số với
+Kiểm thử hiện tại: 27/27 đạt, gồm tải và cache dataset, resume sau gián đoạn cho kết quả khớp từng trọng số với
 lượt liên tục, phục hồi benchmark không gọi train, xuất/nạp eager, và SOTS runtime-only
 không gọi train hoặc cắt block. Notebook đã kiểm tra schema, cú pháp và source nhúng.
