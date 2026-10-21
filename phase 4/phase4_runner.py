@@ -191,9 +191,10 @@ def validate(cfg, inputs):
 
 
 @torch.no_grad()
-def quality(model, rows, cfg, device, save_dir=None):
-    model.eval(); result = []
-    for row in rows:
+def quality(model, rows, cfg, device, save_dir=None, progress_label=None):
+    model.eval(); result = []; started = time.perf_counter()
+    if progress_label: print(f'{progress_label}: PSNR/SSIM/MSE 0/{len(rows)} ảnh', flush=True)
+    for index, row in enumerate(rows, 1):
         x, gt = data.load_pair(row, cfg['eval_max_side'])
         pred = model(x[None].to(device))[0].cpu()
         values = data.metric_values(pred, gt, cfg['crop_border'])
@@ -204,6 +205,9 @@ def quality(model, rows, cfg, device, save_dir=None):
             image = (pred.clamp(0, 1).permute(1, 2, 0).numpy()*255).round().astype(np.uint8)
             name = re.sub(r'[^\w.-]', '_', str(row['id']))
             cv2.imwrite(str(folder/f'{name}.png'), cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+        if progress_label and (index == 1 or index % 25 == 0 or index == len(rows)):
+            print(f'{progress_label}: PSNR/SSIM/MSE {index}/{len(rows)} ảnh; '
+                  f'{time.perf_counter()-started:.1f}s', flush=True)
     return result
 
 
@@ -391,6 +395,7 @@ def train_model(model, cfg, inputs, output, label, schedule, origin, teacher=Non
 @torch.inference_mode(False)
 @torch.no_grad()
 def choose_runtime(model, cfg, inputs, output):
+    print('Runtime: bắt đầu kiểm tra Conv–BN fusion và đo trên các probe.', flush=True)
     device = device_for(cfg); model.to(device).eval()
     if inputs['splits']['val']:
         probes = [data.load_pair(r, cfg['eval_max_side'])[0][None].to(device) for r in inputs['splits']['val'][:4]]
@@ -402,7 +407,9 @@ def choose_runtime(model, cfg, inputs, output):
         selection = 'synthetic'
     fused = copy.deepcopy(model).eval(); count = arch.fuse_conv_bn(fused)
     errors = [float((model(x)-fused(x)).abs().max()) for x in probes]
+    print(f'Runtime: {len(probes)} probe, {count} cặp fusion; đo eager...', flush=True)
     eager_ms = np.mean([latency(model, x, cfg)['latency_ms'] for x in probes])
+    print('Runtime: đo bản fusion...', flush=True)
     fused_ms = np.mean([latency(fused, x, cfg)['latency_ms'] for x in probes])
     acceptable = max(errors) <= cfg['fusion_max_error']
     use = count > 0 and acceptable and fused_ms < eager_ms*.98
@@ -410,6 +417,7 @@ def choose_runtime(model, cfg, inputs, output):
             'fused_pairs': count, 'max_abs_error': max(errors), 'eager_probe_ms': float(eager_ms),
             'fused_probe_ms': float(fused_ms), 'accepted': bool(use)}
     data.dump_json(output/'runtime_selection.json', info)
+    print(f'Runtime: chọn {info["execution"]}; eager={eager_ms:.2f}ms, fused={fused_ms:.2f}ms.', flush=True)
     result = fused if use else model
     model.cpu()
     if not use: fused.cpu()
@@ -418,12 +426,17 @@ def choose_runtime(model, cfg, inputs, output):
 
 def evaluate_one(model, label, execution, cfg, inputs, output):
     device = device_for(cfg); model.to(device).eval()
-    rows = quality(model, inputs['splits']['test'], cfg, device, output/'predictions'/label)
+    total = len(inputs['splits']['test'])
+    print(f'Benchmark {label}: bắt đầu đánh giá {total} ảnh test ({execution}).', flush=True)
+    rows = quality(model, inputs['splits']['test'], cfg, device, output/'predictions'/label, progress_label=label)
     # Save quality before profiling/timing so a later failure does not erase it.
     data.write_csv(output/f'{label}_metrics.csv', rows)
     timing, flops = [], []
     shape_cache = {}
-    for row in inputs['splits']['test']:
+    started = time.perf_counter()
+    print(f'{label}: bắt đầu đo FPS/GFLOPs; warmup={cfg["warmup"]}, '
+          f'repeats={cfg["timing_repeats"]}, shape_cache={cfg.get("cache_shape_benchmarks", False)}.', flush=True)
+    for index, row in enumerate(inputs['splits']['test'], 1):
         x, _ = data.load_pair(row, cfg['eval_max_side']); probe = x[None].to(device)
         shape = tuple(probe.shape)
         cached = cfg.get('cache_shape_benchmarks', False) and shape in shape_cache
@@ -434,6 +447,11 @@ def evaluate_one(model, label, execution, cfg, inputs, output):
         timing.append({'id': row['id'], 'timing_source': 'shape_cache' if cached else 'measured',
                        'representative_id': measured[2], **measured[0]})
         flops.append({'id': row['id'], **measured[1]})
+        if index == 1 or index % 10 == 0 or index == total:
+            elapsed = time.perf_counter()-started
+            print(f'{label}: FPS/GFLOPs {index}/{total} ảnh; {elapsed:.1f}s; '
+                  f'ETA ~{elapsed/index*(total-index)/60:.1f} phút.', flush=True)
+    print(f'{label}: đo probe 256×256 và ghi báo cáo.', flush=True)
     probe = torch.zeros(1, 3, 256, 256, device=device)
     t256, f256 = latency(model, probe, cfg), profile_gflops(model, probe)
     fps = 1000/metric_mean(timing, 'latency_ms'); mse = metric_mean(rows, 'MSE')
