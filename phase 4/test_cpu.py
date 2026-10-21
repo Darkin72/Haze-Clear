@@ -213,6 +213,54 @@ class Phase4Tests(unittest.TestCase):
         model(torch.rand(1,3,32,40)).mean().backward()
         self.assertIsNotNone(model.adapter.body[-1].weight.grad)
 
+    def test_two_block_variant_transplants_more_checkpoint_blocks(self):
+        reference=arch.PaddedModel(DENTrunk(4),{'kind':'reference','depth':4,'detail_width':0})
+        model,selected=arch.final_from_reference(reference, keep=2)
+        self.assertEqual(selected,[0,1])
+        for group in ('g1','g2','g3'):
+            src=getattr(reference.trunk.restoration_network.DE,group).gp
+            dst=getattr(model.trunk.restoration_network.DE,group).gp
+            torch.testing.assert_close(dst[0].conv1.weight,src[0].conv1.weight)
+            torch.testing.assert_close(dst[1].conv1.weight,src[1].conv1.weight)
+            torch.testing.assert_close(dst[-1].weight,src[-1].weight)
+            self.assertNotEqual(dst[1].conv1.weight.data_ptr(),src[1].conv1.weight.data_ptr())
+        self.assertEqual(model.spec['depth'],2)
+        stats=arch.transfer_summary(model)
+        self.assertEqual(stats['inherited_params'],sum(p.numel() for p in model.parameters())-stats['new_adapter_params'])
+        with patch.object(arch,'new_trunk',side_effect=lambda root,depth:DENTrunk(depth)):
+            rebuilt=arch.skeleton('unused',model.spec).eval()
+            rebuilt.load_state_dict(model.state_dict(),strict=True)
+            x=torch.rand(1,3,32,40)
+            torch.testing.assert_close(rebuilt(x),model(x))
+
+    def test_reside_checkpoint_strict_load_and_two_block_transfer(self):
+        reference=arch.PaddedModel(DENTrunk(6),{'kind':'reference','depth':6,'detail_width':0})
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'reside6k_32.15.pth'
+            torch.save({'params_ema':reference.trunk.state_dict()},path)
+            with patch.object(arch,'new_trunk',side_effect=lambda root,depth:DENTrunk(depth)):
+                loaded=arch.reference_model('unused',path)
+            self.assertEqual(loaded.spec['depth'],6)
+            final,selected=arch.final_from_reference(loaded,keep=2)
+            self.assertEqual(selected,[0,1])
+            expected=reference.trunk.restoration_network.DE.g1.gp
+            actual=final.trunk.restoration_network.DE.g1.gp
+            for i in (0,1):
+                for key,value in expected[i].state_dict().items():
+                    torch.testing.assert_close(actual[i].state_dict()[key],value,rtol=0,atol=0)
+            for key,value in expected[-1].state_dict().items():
+                torch.testing.assert_close(actual[-1].state_dict()[key],value,rtol=0,atol=0)
+
+    def test_two_block_adaptation_uses_full_teacher_when_student_has_only_one(self):
+        full=arch.PaddedModel(DENTrunk(6),{'kind':'reference','depth':6,'detail_width':0})
+        student=arch.PaddedModel(DENTrunk(1),{'kind':'reference','depth':1,'detail_width':0})
+        with patch.object(arch,'reference_model',return_value=student), contextlib.redirect_stdout(io.StringIO()):
+            chosen=runner.adaptation_start({'repo_root':'unused','den_blocks':2},
+                                           {'student_source':'student.pth'},full)
+        self.assertIs(chosen,full)
+        with self.assertRaisesRegex(ValueError,'không đủ'):
+            arch.final_from_reference(student,keep=2)
+
     def test_fusion_inside_inference_mode(self):
         model=nn.Sequential(nn.Conv2d(3,4,3,padding=1),nn.BatchNorm2d(4),nn.ReLU(),nn.Conv2d(4,3,1)).eval()
         x=torch.rand(1,3,32,32); expected=model(x)
@@ -625,7 +673,7 @@ class FreshNotebookTests(unittest.TestCase):
         nbformat.validate(nb)
         return nb
 
-    def setup_namespace(self, root):
+    def setup_namespace(self, root, preset='quick'):
         project = root/'project'; project.mkdir(exist_ok=True)
         repo = root/'repo'; (repo/'basicsr/archs').mkdir(parents=True, exist_ok=True)
         (repo/'basicsr/archs/wavemamba_arch.py').write_text('# layout fixture', encoding='utf-8')
@@ -636,7 +684,7 @@ class FreshNotebookTests(unittest.TestCase):
         weights = project/'weights'; weights.mkdir(exist_ok=True)
         for filename in set(checkpoints.WEIGHT_NAMES.values()):
             (weights/filename).write_bytes(b'path-only fixture')
-        edits = {'LOCAL_PROJECT': str(project), 'ARCH_ROOT_OVERRIDE': str(repo),
+        edits = {'LOCAL_PROJECT': str(project), 'ARCH_ROOT_OVERRIDE': str(repo), 'PRESET':preset,
                  'DATA_ROOT_OVERRIDES': overrides,
                  'TRAIN_ROOTS': {'sots-its':str(root/'its-train'), 'sots-ots':str(root/'ots-train')}}
 
@@ -712,6 +760,19 @@ class FreshNotebookTests(unittest.TestCase):
             self.assertEqual(len(calls), 8)  # prepare and GPU forward for each dataset
             self.assertEqual(sum('fresh_preflight.py' in args[-2] for args in calls), 4)
             ast.parse(ns['ARCH_PREFLIGHT_SOURCE'])
+
+    def test_standard_defaults_keep_two_inherited_blocks_and_shared_reside_teacher(self):
+        tree=ast.parse(self.notebook().cells[2].source)
+        preset=next(n.value.value for n in tree.body if isinstance(n,ast.Assign)
+                    and any(isinstance(t,ast.Name) and t.id=='PRESET' for t in n.targets))
+        self.assertEqual(preset,'standard')
+        with tempfile.TemporaryDirectory() as tmp:
+            ns=self.setup_namespace(Path(tmp), preset='standard')
+            for cfg in ns['CONFIGS'][:3]:
+                self.assertEqual(cfg['den_blocks'],2)
+                self.assertEqual(sum(s['steps'] for s in cfg['adapt_schedule']),4000)
+            for cfg in ns['CONFIGS'][:2]:
+                self.assertEqual(runner.resolve_source(cfg).name,'reside6k_32.15.pth')
 
 
 if __name__=='__main__': unittest.main()

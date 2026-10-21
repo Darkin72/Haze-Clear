@@ -21,7 +21,7 @@ def code(s): nb.cells.append(nbf.v4.new_code_cell(s))
 
 md('''# Phase 4 — WaveLite-Final
 
-Kiến trúc đích: **Haar DWT → Mamba/UNet trên LL, giữ dải cao → IWT → DEN một U-block và một depthwise block/group
+Kiến trúc đích: **Haar DWT → Mamba/UNet trên LL, giữ dải cao → IWT → DEN một/hai U-block và một depthwise block/group
 với ba nhánh FFT + attention → residual depthwise detail → RGB**.
 
 Giữ năng lực khôi phục ngữ cảnh của WDMamba; giảm lặp ở DEN để tăng FPS; bổ sung detail adapter nhỏ.
@@ -38,8 +38,12 @@ md('''## 1. Chọn dataset, đường dẫn và artifact
 | I-HAZE, mỗi model | 5.000 | 27.000 |
 | Lặp đo tốc độ | 15 | 40 |
 
+`quick` giữ một DEN U-block/group để ưu tiên FPS; `standard` giữ hai block đầu đã học từ
+checkpoint RESIDE trước khi thêm adapter nhẹ, giúp ưu tiên PSNR và vẫn giảm đáng kể chi phí.
+
 Cả hai đều tính chất lượng trên toàn bộ test. SOTS dùng checkpoint RESIDE-6K để khởi tạo model nhẹ,
-phục hồi trên RESIDE-6K/train hoặc TRAIN_ROOT riêng. Lịch dài hơn không bảo đảm PSNR cao hơn.
+phục hồi trên RESIDE-6K/train hoặc TRAIN_ROOT riêng. Các block giữ lại nhận trực tiếp trọng số
+checkpoint; teacher loss tiếp tục giữ đầu ra Reference trong lúc phục hồi.
 
 `DATASET_NAME='all'` chạy lần lượt **SOTS Indoor → SOTS Outdoor → O-HAZY → I-HAZE**;
 không bao gồm RESIDE-6K riêng. Mỗi dataset có thư mục riêng, cuối lượt có bảng tổng hợp.
@@ -57,7 +61,7 @@ from pathlib import Path
 import ast, json, os, platform, subprocess, sys
 
 DATASET_NAME = 'all'  # @param ['all','o-hazy','sots-its','sots-ots','i-haze','reside6k']
-PRESET = 'quick'        # @param ['quick','standard']
+PRESET = 'standard'     # @param ['quick','standard']
 LOCAL_PROJECT = ''
 ARCH_ROOT_OVERRIDE = ''  # checkout WDMamba đã có; để trống sẽ tự clone
 ARCH_REPO_URL = 'https://github.com/Darkin72/Haze-Clear.git'
@@ -216,6 +220,10 @@ if PRESET == 'quick':
     CONFIG['synthetic_val_max_pairs'] = 64
     CONFIG['synthetic_val_every'] = 200
     CONFIG['synthetic_patience'] = 12
+else:
+    # Standard keeps two learned DEN blocks from the RESIDE teacher before the
+    # lightweight adapter, preserving more checkpoint capacity for PSNR.
+    CONFIG['den_blocks'] = 2
 if DATASET_NAME in ('reside6k', 'sots-its', 'sots-ots'):
     CONFIG['adapt_schedule'] = CONFIG.get('synthetic_adapt_schedule', CONFIG['adapt_schedule'])
     CONFIG['val_max_scenes'] = CONFIG.get('synthetic_val_max_scenes', 0)
@@ -338,8 +346,10 @@ else:
 md('''## 4. Tối ưu và benchmark
 
 O-HAZY/RESIDE/ITS/OTS có train: tối ưu DEN/detail trước, joint trên ảnh đầy đủ sau; MSE + L1 + edge
-và teacher loss nhỏ; EMA/early stopping theo validation. Student Phase 3 một block được mở rộng thành
-hai block với nhánh depthwise residual mới khởi tạo bằng 0, giữ output ban đầu. I-HAZE train độc lập model tham chiếu bốn U-block
+và teacher loss; EMA/early stopping theo validation. Standard giữ hai U-block/group trực tiếp từ
+checkpoint đầy đủ, quick giữ một; cả hai thêm một nhánh depthwise residual khởi tạo bằng 0.
+Nếu student Phase 3 chỉ có một block, standard dùng teacher đầy đủ để lấy đủ hai block đã học.
+I-HAZE train độc lập model tham chiếu bốn U-block
 và model cuối một U-block cộng một depthwise block/group, không chuyển trọng số hay KD giữa hai model.
 
 Conv–BN fusion chỉ được nhận khi output khớp và latency tốt hơn trên validation hoặc tensor giả.
@@ -524,13 +534,15 @@ models = [ref]
 if cfg['dataset_name'] == 'i-haze':
     models.append(arch.skeleton(cfg['repo_root'], {'kind':'final','depth':1,'feature_adapter':True,'detail_width':cfg['detail_width']}))
 elif not (inputs['evaluation_only'] or cfg['dataset_name'] in cfg.get('runtime_only_datasets', [])):
-    start = arch.reference_model(cfg['repo_root'], inputs['student_source']) if inputs['student_source'] else ref
+    start = runner.adaptation_start(cfg, inputs, ref)
     models.append(arch.final_from_reference(start, cfg['den_blocks'], cfg['detail_width'])[0])
 runner.require_adaptation(cfg, inputs)
 if cfg.get('require_compression') and (len(models) < 2 or not runner.compression_info(ref, models[-1])['compressed']):
     raise RuntimeError('Preflight: model cuối chưa có kiến trúc nhẹ hơn Reference.')
 print('Architecture preflight:', [m.spec for m in models], flush=True)
 if len(models) > 1: print('Compression preflight:', runner.compression_info(ref, models[-1]), flush=True)
+if cfg['dataset_name'] != 'i-haze' and len(models) > 1:
+    print('Checkpoint transfer preflight:', arch.transfer_summary(models[-1]), flush=True)
 probe = torch.rand(1, 3, 256, 256, device=cfg['device'])
 for model in models:
     model.to(cfg['device']).eval()

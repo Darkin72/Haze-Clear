@@ -1,7 +1,7 @@
 ﻿# Phase 4 — WaveLite-Final
 
 Notebook chạy mới: **[phase4_all_fresh.ipynb](phase4_all_fresh.ipynb)**.
-Chọn GPU trên Colab rồi Run all. Mặc định `DATASET_NAME='all'`, `PRESET='quick'`,
+Chọn GPU trên Colab rồi Run all. Mặc định `DATASET_NAME='all'`, `PRESET='standard'`,
 `AUTO_DOWNLOAD_DATASETS=True`, `ALLOW_WEIGHT_DOWNLOAD=True`; có thể để trống các đường dẫn.
 SOTS tải một lần qua KaggleHub; O-HAZY/I-HAZE lấy từ VDT_GD2; checkpoint SOTS/O-HAZY tải
 từ archive Google Drive và dùng cache chung. `CHECKPOINT_ZIP` local là lựa chọn khi Drive hết quota.
@@ -14,6 +14,14 @@ I-HAZE `quick` chạy đủ 5.000 bước mỗi model, chọn best bằng valida
 trên RESIDE-6K/train (hoặc TRAIN_ROOT riêng),
 O-HAZY tối ưu từ trọng số cùng miền. Report giữ PSNR, SSIM, MSE, FPS, GFLOPs và FPS/MSE.
 Chất lượng và tốc độ của lượt mới cần được đo trên GPU.
+
+Standard hiện giữ **hai U-block DEN/group** từ checkpoint đầy đủ cho RESIDE/SOTS/O-HAZY;
+quick giữ một. Toàn bộ nhánh wavelet/Mamba, FFT, attention và convolution chung được sao chép
+từ checkpoint; chỉ adapter nhỏ khởi tạo mới. SOTS ITS/OTS vẫn dùng `reside6k_32.15.pth`
+trừ khi đặt checkpoint riêng. Trọng số đầy đủ tiếp tục làm teacher trong lúc fine-tune.
+Log `Checkpoint transfer` và metadata `origin.transfer` ghi số tham số kế thừa/thêm mới;
+`selected_blocks=[0,1]` ở standard và `[0]` ở quick. Standard dự kiến chậm hơn model một block;
+chưa có kết quả GPU xác nhận PSNR/FPS cho biến thể hai block.
 
 Notebook cũ [phase4_wavelite_final.ipynb](phase4_wavelite_final.ipynb) vẫn dùng trên Colab/Linux GPU.
 Notebook tự chứa runner. **Chỉ O-HAZY và I-HAZE có sẵn trong VDT_GD2**;
@@ -59,7 +67,7 @@ I-HAZE có hai model độc lập nên tổng ngân sách gấp đôi số bư�
 thể dừng sớm. Cả hai preset đều đánh giá toàn bộ test, không bảo đảm lịch dài hơn sẽ tốt hơn.
 
 Kiến trúc cuối được mô tả trong [ARCHITECTURE.md](ARCHITECTURE.md): giữ toàn bộ nhánh
-wavelet/Mamba khôi phục LL, giảm DEN còn **một U-block + một residual depthwise block/group**,
+wavelet/Mamba khôi phục LL, giảm DEN còn **một/hai U-block + một residual depthwise block/group**,
 giữ ba nhánh FFT/attention, thêm residual detail adapter ở đầu ra. Các adapter mới có output
 bằng 0 lúc khởi tạo. Đây là cải tiến kế thừa WDMamba, không phải tuyên bố kiến trúc nghiên cứu mới.
 
@@ -85,7 +93,7 @@ ALLOW_WEIGHT_DOWNLOAD = True
 RUN_MODE = 'auto'  # auto | train | resume | benchmark
 ```
 
-Preset mặc định hiện là `PRESET='quick'`, với `RUN_NAME='wavelite_quick_v2'`.
+Preset mặc định hiện là `PRESET='standard'`; notebook fresh tự tạo tên run duy nhất.
 O-HAZY chạy 600 bước DEN/detail + 300 bước joint; I-HAZE dùng lịch ngắn 4.000 + 1.000 bước
 cho mỗi model. Đổi sang `standard` để dùng lịch dài bên dưới.
 
@@ -173,7 +181,7 @@ Các kiểm thử dùng mô hình nhỏ để kiểm tra luồng train/resume/fu
 forward/backward CUDA của WDMamba. Máy cục bộ hiện chỉ có PyTorch CPU, nên chưa có kết quả
 GPU Phase 4. Không có bảng PSNR/FPS giả hoặc giá trị mượn từ phase cũ.
 
-Kiểm thử hiện tại: 38/38 đạt, gồm tải và cache dataset/checkpoint, notebook chạy mới và
+Kiểm thử hiện tại: 44/44 đạt, gồm tải và cache dataset/checkpoint, notebook chạy mới và
 chặn train khi một job chưa sẵn sàng, resume sau gián đoạn cho kết quả khớp từng trọng số với
 lượt liên tục, phục hồi benchmark không gọi train, xuất/nạp eager, SOTS quick có gọi train
 model nhỏ với teacher, và chặn bản sao khi yêu cầu compression. Chế độ runtime-only tường minh

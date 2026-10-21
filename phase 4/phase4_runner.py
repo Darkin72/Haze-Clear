@@ -173,6 +173,14 @@ def compression_info(reference, final):
             'compressed': reference.spec != final.spec and final_count < ref_count}
 
 
+def adaptation_start(cfg, inputs, reference):
+    start = arch.reference_model(cfg['repo_root'], inputs['student_source']) if inputs['student_source'] else reference
+    if start.spec['depth'] < cfg['den_blocks']:
+        print('Student không đủ block; chuyển trọng số từ teacher đầy đủ.', flush=True)
+        start = reference
+    return start
+
+
 def validate(cfg, inputs):
     data.validate(cfg, inputs)
     for path_key, hash_key in (('source', 'source_sha256'), ('student_source', 'student_sha256')):
@@ -480,7 +488,7 @@ def write_report(output, rows, metadata, cfg):
               f'tỉ lệ FPS/MSE: {final["FPS_over_MSE"]/ref["FPS_over_MSE"]:.3f}×.',
               f'Mục tiêu: giảm PSNR ≤ {cfg["psnr_tolerance_db"]:.2f} dB, FPS ≥ {cfg["target_speedup"]:.2f}× '
               f'và FPS 256 ≥ {cfg["target_speedup_256"]:.2f}×. REVIEW nghĩa là chưa đạt đủ điều kiện.', '',
-              'Kiến trúc đích: DWT → nhánh Mamba trên LL, giữ các dải cao → IWT → DEN một U-block '
+              f'Kiến trúc thực đo: DWT → nhánh Mamba trên LL, giữ các dải cao → IWT → DEN {metadata["model_spec"]["depth"]} U-block/group '
               'và một residual depthwise block/group '
               'với ba nhánh FFT/attention → residual depthwise detail. Bản runtime giữ cấu trúc đầy đủ '
               'khi chỉ có bộ benchmark; kiến trúc thực đo được lưu trong metadata.',
@@ -586,13 +594,16 @@ def run(cfg, mode='auto'):
             training = {'mode': 'runtime_only', 'steps': 0}
             origin = {'method': 'runtime_only', 'source': inputs['source']}
         else:
-            start = arch.reference_model(cfg['repo_root'], inputs['student_source']) if inputs['student_source'] else reference
+            start = adaptation_start(cfg, inputs, reference)
             final, selected = arch.final_from_reference(start, cfg['den_blocks'], cfg['detail_width'])
             if cfg.get('require_compression') and not compression_info(reference, final)['compressed']:
                 raise ValueError('Model cuối chưa giảm tham số so với Reference; dừng trước train.')
             print('Before recovery training:', compression_info(reference, final), flush=True)
             origin = {'method': 'inherited', 'source': inputs['source'], 'student_source': inputs['student_source'],
-                      'selected_blocks': selected}
+                      'selected_blocks': selected,
+                      'initialization_source': inputs['student_source'] if start is not reference else inputs['source'],
+                      'transfer': arch.transfer_summary(final)}
+            print('Checkpoint transfer:', origin['transfer'], 'selected blocks:', selected, flush=True)
             training = train_model(final, cfg, inputs, output, 'final', cfg['adapt_schedule'], 'inherited',
                                    teacher=reference, mode=mode)
     compression = compression_info(reference, final)

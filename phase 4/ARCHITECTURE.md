@@ -30,8 +30,12 @@ flowchart TD
 ```
 
 WaveMamba giữ `wf=16`, `n_l_blocks=[1,2,2,4]`, FFN scale2 và toàn bộ cấu trúc LL gốc.
+Sơ đồ trên mô tả quick một block. Standard giữ hai U-block/group (chỉ số 0 và 1), cả hai nhận
+nguyên trọng số checkpoint. Trunk, terminal conv, FFT và attention cũng kế thừa trực tiếp;
+checkpoint đầy đủ tiếp tục làm teacher. Không trung bình trọng số các block phi tuyến.
 U-block giữ nguyên cấu trúc/checkpoint; group-terminal conv, FFT, ECA, pre/post và channel
-attention đều giữ. Chỉ số U-block giữ là 0 trong mỗi group, tương thích Phase3 một block.
+attention đều giữ. Quick giữ block 0, tương thích Phase3 một block. Standard cần checkpoint
+đầy đủ để lấy block 0 và 1; nếu student chỉ có một block thì dùng teacher đầy đủ.
 
 Mỗi depthwise residual ở group có:
 
@@ -48,7 +52,7 @@ so với Fast-WDMamba một block. Theo baseline 6.500.975 tham số đã đo �
 dự kiến có 6.506.962 tham số. Counted FLOPs của các adapter là 0,748683264 GFLOPs tại256²,
 chưa gồm activation/cộng residual. Runner sẽ xuất số đếm thực tế toàn mạng.
 
-So với WDMamba bốn/sáu U-block/group, phần DEN giảm số U-block nặng còn ba tổng cộng.
+So với WDMamba bốn/sáu U-block/group, phần DEN giảm số U-block nặng còn ba (quick) hoặc sáu (standard) tổng cộng.
 So với Fast-WDMamba Phase3, đây là thêm năng lực phục hồi với chi phí nhỏ; bản thân adapter
 không làm model nhanh hơn Phase3. Tăng tốc runtime còn phụ thuộc fusion và GPU. Nếu tham
 chiếu hiện có chỉ là Phase3, điều kiện tăng FPS2× có thể không đạt và report phải là REVIEW.

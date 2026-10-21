@@ -10,7 +10,7 @@ import torch
 from torch import nn
 import phase4_data as data
 
-ARCH_VERSION = 'p4-wavelite-uden1-dw-detail-v1'
+ARCH_VERSION = 'p4-wavelite-uden1or2-dw-detail-v2'
 
 
 @lru_cache(maxsize=1)
@@ -114,16 +114,19 @@ def reference_model(repo_root, path=None, depth=4):
 
 
 def final_from_reference(reference, keep=1, detail_width=16):
-    if keep != 1:
-        raise ValueError('Phase 4 cố định một U-block và một depthwise block/group.')
+    if keep not in (1, 2):
+        raise ValueError('Phase 4 chỉ hỗ trợ giữ một hoặc hai U-block/group.')
     trunk = copy.deepcopy(reference.trunk)
     depth = reference.spec['depth']
-    selected = [0]
+    if depth < keep:
+        raise ValueError(f'Checkpoint có {depth} block/group, không đủ để giữ {keep} block đã học.')
+    selected = list(range(keep))
     for name in ('g1', 'g2', 'g3'):
         group = getattr(trunk.restoration_network.DE, name)
         gp = group.gp
         channels = gp[depth].in_channels
-        group.gp = nn.Sequential(copy.deepcopy(gp[0]), FeatureAdapter(channels), copy.deepcopy(gp[depth]))
+        kept = [copy.deepcopy(gp[i]) for i in range(keep)]
+        group.gp = nn.Sequential(*kept, FeatureAdapter(channels), copy.deepcopy(gp[depth]))
     return PaddedModel(trunk, {'kind': 'final', 'depth': keep, 'feature_adapter': True, 'detail_width': detail_width},
                        DetailAdapter(detail_width)), selected
 
@@ -131,13 +134,24 @@ def final_from_reference(reference, keep=1, detail_width=16):
 def skeleton(repo_root, spec):
     if spec['kind'] == 'reference':
         return reference_model(repo_root, depth=spec['depth'])
-    if spec['kind'] != 'final' or spec['depth'] != 1 or not spec.get('feature_adapter'):
+    if spec['kind'] != 'final' or spec['depth'] not in (1, 2) or not spec.get('feature_adapter'):
         raise ValueError(f'Model spec không hợp lệ: {spec}')
-    trunk = new_trunk(repo_root, 1)
+    trunk = new_trunk(repo_root, spec['depth'])
     for name in ('g1', 'g2', 'g3'):
         group = getattr(trunk.restoration_network.DE, name)
-        group.gp = nn.Sequential(group.gp[0], FeatureAdapter(group.gp[-1].in_channels), group.gp[-1])
+        terminal = group.gp[-1]
+        kept = list(group.gp[:spec['depth']])
+        group.gp = nn.Sequential(*kept, FeatureAdapter(terminal.in_channels), terminal)
     return PaddedModel(trunk, dict(spec), DetailAdapter(spec['detail_width']))
+
+
+def transfer_summary(model):
+    """Parameter accounting immediately after transplant, before adaptation."""
+    total = sum(p.numel() for p in model.parameters())
+    new = sum(p.numel() for module in model.modules()
+              if isinstance(module, (FeatureAdapter, DetailAdapter)) for p in module.parameters())
+    return {'inherited_params': total-new, 'new_adapter_params': new,
+            'inherited_fraction': (total-new)/max(1, total)}
 
 
 @torch.inference_mode(False)
