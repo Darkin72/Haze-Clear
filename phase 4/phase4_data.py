@@ -148,15 +148,41 @@ def collect_pairs(root, dataset_name='o-hazy'):
     return pairs
 
 
-def _holdout_train(rows, seed, fraction, max_scenes=0):
-    scenes = sorted({r['scene'] for r in rows})
+def _content_groups(rows):
+    """Keep shared scene IDs or identical clear/hazy files in one component."""
+    parents, owners, hashes = {}, {}, {}
+
+    def find(scene):
+        while parents[scene] != scene:
+            parents[scene] = parents[parents[scene]]
+            scene = parents[scene]
+        return scene
+
+    for row in rows:
+        scene = row['scene']; parents.setdefault(scene, scene)
+        for side in ('clear', 'hazy'):
+            path = row[side]
+            if path not in hashes: hashes[path] = sha256(path)
+            key = (side, hashes[path])
+            other = owners.setdefault(key, scene)
+            a, b = find(scene), find(other)
+            if a != b:
+                # Stable representative regardless of file traversal order.
+                parents[max(a, b)] = min(a, b)
+    return [find(row['scene']) for row in rows]
+
+
+def _holdout_train(rows, seed, fraction, max_scenes=0, group_content=False):
+    groups = _content_groups(rows) if group_content else [r['scene'] for r in rows]
+    scenes = sorted(set(groups))
     if len(scenes) < 2:
         raise ValueError('Cần ít nhất hai scene train để tách validation.')
     random.Random(seed).shuffle(scenes)
     count = min(len(scenes)-1, max(1, round(len(scenes)*fraction)))
     if max_scenes: count = min(count, max_scenes)
     val = set(scenes[:count])
-    return [r for r in rows if r['scene'] not in val], [r for r in rows if r['scene'] in val]
+    return ([r for r, group in zip(rows, groups) if group not in val],
+            [r for r, group in zip(rows, groups) if group in val])
 
 
 def partition(pairs, cfg):
@@ -183,7 +209,8 @@ def partition(pairs, cfg):
         else:
             result = {k: [p for p in pairs if p.get('source_split') == k] for k in ('train', 'val', 'test')}
             if result['train'] and not result['val']:
-                result['train'], result['val'] = _holdout_train(result['train'], cfg.get('seed', 2026), .1)
+                result['train'], result['val'] = _holdout_train(
+                    result['train'], cfg.get('seed', 2026), .1, group_content=dataset_name == 'reside6k')
     assert_disjoint(result)
     return result
 
@@ -234,13 +261,13 @@ def dataset_splits(cfg):
         explicit = {r.get('source_split') for r in training}
         if explicit == {None}:
             splits['train'], splits['val'] = _holdout_train(
-                training, cfg.get('seed', 2026), .1, cfg.get('val_max_scenes', 0))
+                training, cfg.get('seed', 2026), .1, cfg.get('val_max_scenes', 0), group_content=True)
         elif explicit <= {'train', 'val'} and 'train' in explicit:
             splits['train'] = [r for r in training if r['source_split'] == 'train']
             splits['val'] = [r for r in training if r['source_split'] == 'val']
             if not splits['val']:
                 splits['train'], splits['val'] = _holdout_train(
-                    splits['train'], cfg.get('seed', 2026), .1, cfg.get('val_max_scenes', 0))
+                    splits['train'], cfg.get('seed', 2026), .1, cfg.get('val_max_scenes', 0), group_content=True)
         else:
             raise ValueError('TRAIN_ROOT chỉ chứa train/val hoặc các cặp ảnh phẳng, không chứa test.')
     # Discard excess validation scenes/variants, never move them into training.

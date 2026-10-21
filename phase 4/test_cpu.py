@@ -503,6 +503,52 @@ class DatasetDownloadTests(unittest.TestCase):
             self.assertNotIn('1', {r['scene'] for k in ('train', 'val') for r in splits[k]})
             data.assert_disjoint(splits)
 
+    def test_sots_holdout_groups_duplicate_clear_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for side in ('GT', 'hazy'):
+                (root/'sots'/side).mkdir(parents=True)
+                (root/'training'/side).mkdir(parents=True)
+                (root/'sots'/side/'test.png').write_bytes(('test-'+side).encode())
+            # Two atmospheric variants have different names but identical GT content.
+            for name, payload in (('a', b'clear-a'), ('b', b'clear-a'), ('c', b'clear-c'),
+                                  ('d', b'clear-d'), ('e', b'clear-e'), ('f', b'clear-f'),
+                                  ('g', b'clear-g'), ('h', b'clear-h'), ('i', b'clear-i'),
+                                  ('j', b'clear-j')):
+                (root/'training'/'GT'/f'{name}.png').write_bytes(payload)
+                (root/'training'/'hazy'/f'{name}.png').write_bytes(name.encode()+b'-hazy')
+            for seed in range(20):
+                cfg = {'dataset_name':'sots-its', 'data_root':str(root/'sots'),
+                       'train_root':str(root/'training'), 'eval_only':False, 'seed':seed,
+                       'work_root':str(root/'work')}
+                with contextlib.redirect_stdout(io.StringIO()):
+                    prepared = data.prepare(cfg)
+                    data.validate(cfg, prepared)
+                splits = prepared['splits']
+                locations = {r['id']:split for split, rows in splits.items() for r in rows}
+                self.assertEqual(locations['a'], locations['b'])
+                data.assert_disjoint(splits)
+
+    def test_content_grouping_keeps_transitive_links_and_original_scene_ids(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); rows = []
+            # A/B share clear, B/C share hazy, C/D share scene: all four must stay together.
+            for i, (scene, clear, hazy) in enumerate([
+                    ('a','clear-ab','hazy-a'), ('b','clear-ab','hazy-bc'),
+                    ('c','clear-c','hazy-bc'), ('c','clear-d','hazy-d'),
+                    ('e','clear-e','hazy-e'), ('f','clear-f','hazy-f')]):
+                paths = {}
+                for side, content in [('clear',clear), ('hazy',hazy)]:
+                    path = root/f'{i}_{side}.png'; path.write_bytes(content.encode()); paths[side] = str(path)
+                rows.append({'id':str(i), 'scene':scene, **paths})
+            original = copy.deepcopy(rows)
+            for seed in range(12):
+                train, val = data._holdout_train(rows, seed, .5, group_content=True)
+                places = {r['id']:split for split, group in [('train',train),('val',val)] for r in group}
+                self.assertEqual(len({places[str(i)] for i in range(4)}), 1)
+                self.assertEqual(rows, original)
+                self.assertTrue(train); self.assertTrue(val)
+
     def test_all_dataset_download_error_keeps_local_jobs_available(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
