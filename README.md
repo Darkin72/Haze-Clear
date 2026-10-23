@@ -139,6 +139,10 @@ case khi có lỗi. Không thay đổi metadata của lần chạy cũ khi đổ
 
 ## Hướng phát triển và mức độ hoàn thiện
 
+[Phase 3.2 — SWDNet train từ đầu](phase%203.2/README.md) là nhánh thử nghiệm kiến trúc mới,
+khởi tạo ngẫu nhiên, dùng PyTorch thuần và có notebook tự chứa để train/đo PSNR, SSIM, FPS, GFLOPs.
+Chưa có kết quả GPU để xác nhận thay thế WDMamba về chất lượng hoặc tốc độ.
+
 Mô hình và benchmark đã hoạt động. Profiling xác định DEN chiếm **71,71%**
 thời gian đo từng khối, LFRN chiếm **25,89%**. Trọng tâm tiếp theo là tối ưu DEN.
 

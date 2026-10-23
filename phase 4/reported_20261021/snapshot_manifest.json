@@ -1,0 +1,29 @@
+{
+  "artifact_kind": "reported_snapshot_manifest",
+  "source_run": "wavelite_all_20261021_152321_2d9efd",
+  "source_log": "source_log.txt",
+  "source_sha256": "8c7f7170b8e361a373f862a4d7bfc089ad747dc46d14512bbb2c4353def7777e",
+  "created_on": "2026-10-23",
+  "datasets": [
+    "sots-its",
+    "sots-ots",
+    "o-hazy",
+    "i-haze"
+  ],
+  "reported_statuses": {
+    "sots-its": "REVIEW",
+    "sots-ots": "REVIEW",
+    "o-hazy": "REVIEW",
+    "i-haze": "PASS"
+  },
+  "records": 12,
+  "current_rerun_preserved": "wavelite_all_20261022_140137_86b927",
+  "not_available": [
+    "old trained weights",
+    "old per-image metrics",
+    "old timing samples",
+    "old full metadata",
+    "old training histories"
+  ],
+  "note": "Only aggregate values directly present in the supplied log are exported. Raw identifiers are preserved in CSV. This snapshot does not change the later run results."
+}

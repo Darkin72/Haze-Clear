@@ -1,0 +1,69 @@
+# Python caches, build products and local environments
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+build/
+dist/
+*.egg-info/
+.venv/
+.venvs/
+venv/
+.env
+.env.*
+!.env.example
+
+# Model weights, exported models and downloaded archives (kept locally)
+*.pth
+*.pt
+*.ckpt
+*.onnx
+*.safetensors
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+
+# Training/runtime output
+*.log
+events.out.tfevents.*
+checkpoints/
+predictions/
+failure_cases/
+experiments/
+wandb/
+runs/
+
+# Phase runs: downloaded data, copied runners and generated measurements
+/phase */datasets/
+/phase */results/*
+/phase */*.csv
+/phase */config.json
+/phase */inputs.json
+/phase */metadata.json
+/phase */runtime_selection.json
+/phase */suite_status.json
+/phase */*_latency.json
+/phase */probe_*.json
+/phase */quality_partial.json
+/phase */training.json
+/phase */environment.txt
+/phase */pareto_quality_speed.png
+
+# The same generated formats can also appear in nested run folders.
+/phase */**/*.csv
+/phase */**/*.json
+/phase */**/*.log
+/phase 3/previous_run_review/
+
+# The published snapshot is intentionally versioned despite the run-output rules.
+!/phase 4/reported_20261021/
+!/phase 4/reported_20261021/**/*.csv
+!/phase 4/reported_20261021/**/*.json
+
+# Deliberately archived report: keep provenance and the published numbers
+!/phase 4/results/bao_cao_da_chot.md

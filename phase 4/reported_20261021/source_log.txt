@@ -1,0 +1,918 @@
+$ /content/wdmamba_phase4_env311/bin/python -u /content/wdmamba_phase4_new/all/wavelite_all_20261021_152321_2d9efd/datasets/sots-its/phase4_runner.py /content/wdmamba_phase4_new/all/wavelite_all_20261021_152321_2d9efd/datasets/sots-its/config.json auto
+Loại 50 cặp train trùng scene/nội dung với benchmark.
+/content/wdmamba_phase4_env311/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+Before recovery training: {'reference_params': 11254415, 'final_params': 7457650, 'parameter_reduction': 0.3373578280168271, 'architecture_changed': True, 'compressed': True}
+Checkpoint transfer: {'inherited_params': 7451663, 'new_adapter_params': 5987, 'inherited_fraction': 0.9991972001904085} selected blocks: [0, 1]
+final/0: 50/3000 loss=0.002544
+final/0: 100/3000 loss=0.001213
+final/0: 150/3000 loss=0.002201
+final/0: 200/3000 loss=0.000739
+final: validation=32.5415; best=32.5415 tại step 200
+final/0: 250/3000 loss=0.000781
+final/0: 300/3000 loss=0.001299
+final/0: 350/3000 loss=0.001380
+final/0: 400/3000 loss=0.000765
+final: validation=32.9669; best=32.9669 tại step 400
+final/0: 450/3000 loss=0.000966
+final/0: 500/3000 loss=0.000908
+final/0: 550/3000 loss=0.001981
+final/0: 600/3000 loss=0.001135
+final: validation=33.0706; best=33.0706 tại step 600
+final/0: 650/3000 loss=0.001670
+final/0: 700/3000 loss=0.002547
+final/0: 750/3000 loss=0.000713
+final/0: 800/3000 loss=0.001027
+final: validation=33.1119; best=33.1119 tại step 800
+final/0: 850/3000 loss=0.002093
+final/0: 900/3000 loss=0.000687
+final/0: 950/3000 loss=0.000690
+final/0: 1000/3000 loss=0.003653
+final: validation=33.1557; best=33.1557 tại step 1000
+final/0: 1050/3000 loss=0.001104
+final/0: 1100/3000 loss=0.000638
+final/0: 1150/3000 loss=0.001145
+final/0: 1200/3000 loss=0.001370
+final: validation=33.2185; best=33.2185 tại step 1200
+final/0: 1250/3000 loss=0.000910
+final/0: 1300/3000 loss=0.000899
+final/0: 1350/3000 loss=0.001164
+final/0: 1400/3000 loss=0.001200
+final: validation=33.3082; best=33.3082 tại step 1400
+final/0: 1450/3000 loss=0.000999
+final/0: 1500/3000 loss=0.001440
+final/0: 1550/3000 loss=0.000492
+final/0: 1600/3000 loss=0.001028
+final: validation=33.3975; best=33.3975 tại step 1600
+final/0: 1650/3000 loss=0.000510
+final/0: 1700/3000 loss=0.000315
+final/0: 1750/3000 loss=0.001476
+final/0: 1800/3000 loss=0.000568
+final: validation=33.4581; best=33.4581 tại step 1800
+final/0: 1850/3000 loss=0.000640
+final/0: 1900/3000 loss=0.001221
+final/0: 1950/3000 loss=0.000693
+final/0: 2000/3000 loss=0.000850
+final: validation=33.5023; best=33.5023 tại step 2000
+final/0: 2050/3000 loss=0.000701
+final/0: 2100/3000 loss=0.001143
+final/0: 2150/3000 loss=0.000820
+final/0: 2200/3000 loss=0.001131
+final: validation=33.5339; best=33.5339 tại step 2200
+final/0: 2250/3000 loss=0.001399
+final/0: 2300/3000 loss=0.001133
+final/0: 2350/3000 loss=0.000810
+final/0: 2400/3000 loss=0.000967
+final: validation=33.5467; best=33.5467 tại step 2400
+final/0: 2450/3000 loss=0.000653
+final/0: 2500/3000 loss=0.000791
+final/0: 2550/3000 loss=0.000451
+final/0: 2600/3000 loss=0.000561
+final: validation=33.5590; best=33.5590 tại step 2600
+final/0: 2650/3000 loss=0.001051
+final/0: 2700/3000 loss=0.000351
+final/0: 2750/3000 loss=0.001384
+final/0: 2800/3000 loss=0.001084
+final: validation=33.5683; best=33.5683 tại step 2800
+final/0: 2850/3000 loss=0.000584
+final/0: 2900/3000 loss=0.000567
+final/0: 2950/3000 loss=0.000671
+final/0: 3000/3000 loss=0.000679
+final: validation=33.5735; best=33.5735 tại step 3000
+final/1: 50/1000 loss=0.000518
+final/1: 100/1000 loss=0.000888
+final/1: 150/1000 loss=0.001149
+final/1: 200/1000 loss=0.000567
+final: validation=33.5810; best=33.5810 tại step 3200
+final/1: 250/1000 loss=0.001786
+final/1: 300/1000 loss=0.001110
+final/1: 350/1000 loss=0.000820
+final/1: 400/1000 loss=0.000676
+final: validation=33.5962; best=33.5962 tại step 3400
+final/1: 450/1000 loss=0.000413
+final/1: 500/1000 loss=0.000891
+final/1: 550/1000 loss=0.000428
+final/1: 600/1000 loss=0.001225
+final: validation=33.6097; best=33.6097 tại step 3600
+final/1: 650/1000 loss=0.000660
+final/1: 700/1000 loss=0.001588
+final/1: 750/1000 loss=0.001638
+final/1: 800/1000 loss=0.001478
+final: validation=33.6218; best=33.6218 tại step 3800
+final/1: 850/1000 loss=0.001431
+final/1: 900/1000 loss=0.000500
+final/1: 950/1000 loss=0.000574
+final/1: 1000/1000 loss=0.001710
+final: validation=33.6288; best=33.6288 tại step 4000
+Architecture check: {'reference_params': 11254415, 'final_params': 7457650, 'parameter_reduction': 0.3373578280168271, 'architecture_changed': True, 'compressed': True}
+{'dataset': 'sots-its', 'model': 'Reference', 'execution': 'eager', 'precision': 'FP32', 'batch_size': 1, 'images': 500, 'eval_max_side': 768, 'crop_border': 4, 'PSNR': 31.48090735031579, 'SSIM': 0.9732528393268585, 'MSE': 0.0009333073515100554, 'latency_ms': 98.78464067764284, 'FPS': 10.123031203436085, 'FPS_256': 41.31858373242363, 'FPS_over_MSE': 10846.406799493661, 'params_M': 11.254415, 'GFLOPs_256_counted': 66.885662496, 'GFLOPs_256_supplemental': 2.006319104, 'GFLOPs_256_estimated_total': 68.8919816, 'GFLOPs_test_estimated_mean': 323.25644664082586}
+{'dataset': 'sots-its', 'model': 'WaveLite_eager', 'execution': 'eager', 'precision': 'FP32', 'batch_size': 1, 'images': 500, 'eval_max_side': 768, 'crop_border': 4, 'PSNR': 29.727496913738797, 'SSIM': 0.9690691646337509, 'MSE': 0.0013288920546267846, 'latency_ms': 43.35932835540771, 'FPS': 23.063087873575917, 'FPS_256': 64.22808536234096, 'FPS_over_MSE': 17355.125115901996, 'params_M': 7.45765, 'GFLOPs_256_counted': 26.563720992, 'GFLOPs_256_supplemental': 2.006319104, 'GFLOPs_256_estimated_total': 28.570040096, 'GFLOPs_test_estimated_mean': 134.24734584082574}
+{'dataset': 'sots-its', 'model': 'WaveLite_deploy', 'execution': 'eager', 'precision': 'FP32', 'batch_size': 1, 'images': 500, 'eval_max_side': 768, 'crop_border': 4, 'PSNR': 29.727496913738797, 'SSIM': 0.9690691646337509, 'MSE': 0.0013288920546267846, 'latency_ms': 43.32171189308166, 'FPS': 23.083113669838536, 'FPS_256': 64.88787707166394, 'FPS_over_MSE': 17370.19465913005, 'params_M': 7.45765, 'GFLOPs_256_counted': 26.563720992, 'GFLOPs_256_supplemental': 2.006319104, 'GFLOPs_256_estimated_total': 28.570040096, 'GFLOPs_test_estimated_mean': 134.24734584082574}
+# Phase 4 — WaveLite-Final / sots-its
+
+Trạng thái: **REVIEW**.
+
+**PSNR 29.73 dB · 23.1 FPS · 28.57 GFLOPs ở 256² · FPS/MSE 17,370**
+
+| Model | Thực thi | PSNR | SSIM | MSE | FPS | FPS/MSE | FPS 256 | GFLOPs 256* | Params M |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Reference | eager | 31.4809 | 0.97325 | 0.00093331 | 10.12 | 10846.41 | 41.32 | 68.892 | 11.254 |
+| WaveLite_eager | eager | 29.7275 | 0.96907 | 0.00132889 | 23.06 | 17355.13 | 64.23 | 28.570 | 7.458 |
+| WaveLite_deploy | eager | 29.7275 | 0.96907 | 0.00132889 | 23.08 | 17370.19 | 64.89 | 28.570 | 7.458 |
+
+Kiến trúc: DEN 6 → 2 U-block/group; giảm 33.7% tham số.
+
+ΔPSNR: -1.7534 dB; tăng tốc: 2.280×; tỉ lệ FPS/MSE: 1.601×.
+Mục tiêu: giảm PSNR ≤ 0.30 dB, FPS ≥ 2.00× và FPS 256 ≥ 1.10×. REVIEW nghĩa là chưa đạt đủ điều kiện.
+
+Kiến trúc thực đo: DWT → nhánh Mamba trên LL, giữ các dải cao → IWT → DEN 2 U-block/group và một residual depthwise block/group với ba nhánh FFT/attention → residual depthwise detail. Bản runtime giữ cấu trúc đầy đủ khi chỉ có bộ benchmark; kiến trúc thực đo được lưu trong metadata.
+RGB [0,1], batch 1, FP32, TF32 tắt; max-side=768 (0 nghĩa là kích thước gốc), crop border=4. Không TTA/tiling.
+PSNR/SSIM/MSE là trung bình đều theo ảnh. FPS = 1000 / latency trung bình theo ảnh. FPS/MSE = FPS / MSE trung bình; không lấy trung bình tỉ số và không suy MSE từ PSNR trung bình.
+FPS đo forward gồm pad/crop, đã warm-up; không gồm đọc ảnh, H2D/D2H và tính metric. Tất cả model đo lại trong cùng phiên GPU.
+*GFLOPs: 1 MAC=2 FLOPs; Conv/Linear và SS2D projections counted; scan/FFT/Haar ước tính bổ sung. Normalization, activation, pooling và elementwise chưa được đếm đầy đủ. CSV giữ từng thành phần.
+Test chỉ dùng lập bảng cuối; validation quyết định trọng số và runtime. FPS/MSE là metric phụ thuộc thiết bị và protocol, không thay thế điều kiện PSNR riêng.
+Thông tin tái lập và nguồn trọng số: metadata.json, config.json, inputs.json và SHA256 mã/dữ liệu.
+$ /content/wdmamba_phase4_env311/bin/python -u /content/wdmamba_phase4_new/all/wavelite_all_20261021_152321_2d9efd/datasets/sots-ots/phase4_runner.py /content/wdmamba_phase4_new/all/wavelite_all_20261021_152321_2d9efd/datasets/sots-ots/config.json auto
+Loại 492 cặp train trùng scene/nội dung với benchmark.
+/content/wdmamba_phase4_env311/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+Before recovery training: {'reference_params': 11254415, 'final_params': 7457650, 'parameter_reduction': 0.3373578280168271, 'architecture_changed': True, 'compressed': True}
+Checkpoint transfer: {'inherited_params': 7451663, 'new_adapter_params': 5987, 'inherited_fraction': 0.9991972001904085} selected blocks: [0, 1]
+final/0: 50/3000 loss=0.001290
+final/0: 100/3000 loss=0.001695
+final/0: 150/3000 loss=0.001261
+final/0: 200/3000 loss=0.000837
+final: validation=32.4493; best=32.4493 tại step 200
+final/0: 250/3000 loss=0.001576
+final/0: 300/3000 loss=0.000781
+final/0: 350/3000 loss=0.000895
+final/0: 400/3000 loss=0.002458
+final: validation=32.9162; best=32.9162 tại step 400
+final/0: 450/3000 loss=0.001542
+final/0: 500/3000 loss=0.001548
+final/0: 550/3000 loss=0.000870
+final/0: 600/3000 loss=0.001077
+final: validation=33.0337; best=33.0337 tại step 600
+final/0: 650/3000 loss=0.001437
+final/0: 700/3000 loss=0.001373
+final/0: 750/3000 loss=0.000546
+final/0: 800/3000 loss=0.000931
+final: validation=33.0977; best=33.0977 tại step 800
+final/0: 850/3000 loss=0.001092
+final/0: 900/3000 loss=0.000738
+final/0: 950/3000 loss=0.000781
+final/0: 1000/3000 loss=0.000659
+final: validation=33.1739; best=33.1739 tại step 1000
+final/0: 1050/3000 loss=0.000696
+final/0: 1100/3000 loss=0.001219
+final/0: 1150/3000 loss=0.001063
+final/0: 1200/3000 loss=0.001209
+final: validation=33.2775; best=33.2775 tại step 1200
+final/0: 1250/3000 loss=0.001528
+final/0: 1300/3000 loss=0.000901
+final/0: 1350/3000 loss=0.001766
+final/0: 1400/3000 loss=0.001226
+final: validation=33.3793; best=33.3793 tại step 1400
+final/0: 1450/3000 loss=0.000825
+final/0: 1500/3000 loss=0.000920
+final/0: 1550/3000 loss=0.000640
+final/0: 1600/3000 loss=0.001039
+final: validation=33.4484; best=33.4484 tại step 1600
+final/0: 1650/3000 loss=0.000587
+final/0: 1700/3000 loss=0.001323
+final/0: 1750/3000 loss=0.001016
+final/0: 1800/3000 loss=0.000851
+final: validation=33.5054; best=33.5054 tại step 1800
+final/0: 1850/3000 loss=0.001161
+final/0: 1900/3000 loss=0.001562
+final/0: 1950/3000 loss=0.001242
+final/0: 2000/3000 loss=0.000928
+final: validation=33.5368; best=33.5368 tại step 2000
+final/0: 2050/3000 loss=0.000764
+final/0: 2100/3000 loss=0.000751
+final/0: 2150/3000 loss=0.000963
+final/0: 2200/3000 loss=0.000874
+final: validation=33.5533; best=33.5533 tại step 2200
+final/0: 2250/3000 loss=0.000925
+final/0: 2300/3000 loss=0.000532
+final/0: 2350/3000 loss=0.000823
+final/0: 2400/3000 loss=0.001814
+final: validation=33.5684; best=33.5684 tại step 2400
+final/0: 2450/3000 loss=0.000588
+final/0: 2500/3000 loss=0.000788
+final/0: 2550/3000 loss=0.000891
+final/0: 2600/3000 loss=0.000703
+final: validation=33.5777; best=33.5777 tại step 2600
+final/0: 2650/3000 loss=0.001073
+final/0: 2700/3000 loss=0.000834
+final/0: 2750/3000 loss=0.000900
+final/0: 2800/3000 loss=0.000614
+final: validation=33.5869; best=33.5869 tại step 2800
+final/0: 2850/3000 loss=0.001099
+final/0: 2900/3000 loss=0.000837
+final/0: 2950/3000 loss=0.001418
+final/0: 3000/3000 loss=0.001314
+final: validation=33.5918; best=33.5918 tại step 3000
+final/1: 50/1000 loss=0.000475
+final/1: 100/1000 loss=0.001179
+final/1: 150/1000 loss=0.000747
+final/1: 200/1000 loss=0.001321
+final: validation=33.5979; best=33.5979 tại step 3200
+final/1: 250/1000 loss=0.002331
+final/1: 300/1000 loss=0.000693
+final/1: 350/1000 loss=0.001316
+final/1: 400/1000 loss=0.000669
+final: validation=33.6092; best=33.6092 tại step 3400
+final/1: 450/1000 loss=0.000389
+final/1: 500/1000 loss=0.000759
+final/1: 550/1000 loss=0.001131
+final/1: 600/1000 loss=0.000990
+final: validation=33.6178; best=33.6178 tại step 3600
+final/1: 650/1000 loss=0.001520
+final/1: 700/1000 loss=0.000394
+final/1: 750/1000 loss=0.002105
+final/1: 800/1000 loss=0.000297
+final: validation=33.6239; best=33.6239 tại step 3800
+final/1: 850/1000 loss=0.000445
+final/1: 900/1000 loss=0.001315
+final/1: 950/1000 loss=0.000888
+final/1: 1000/1000 loss=0.000666
+final: validation=33.6287; best=33.6287 tại step 4000
+Architecture check: {'reference_params': 11254415, 'final_params': 7457650, 'parameter_reduction': 0.3373578280168271, 'architecture_changed': True, 'compressed': True}
+{'dataset': 'sots-ots', 'model': 'Reference', 'execution': 'eager', 'precision': 'FP32', 'batch_size': 1, 'images': 500, 'eval_max_side': 768, 'crop_border': 4, 'PSNR': 33.29939458844244, 'SSIM': 0.9815773500204086, 'MSE': 0.0007108898181102196, 'latency_ms': 88.51257845573424, 'FPS': 11.297829274063087, 'FPS_256': 41.9072788426724, 'FPS_over_MSE': 15892.518061514029, 'params_M': 11.254415, 'GFLOPs_256_counted': 66.885662496, 'GFLOPs_256_supplemental': 2.006319104, 'GFLOPs_256_estimated_total': 68.8919816, 'GFLOPs_test_estimated_mean': 290.7397775482562}
+{'dataset': 'sots-ots', 'model': 'WaveLite_eager', 'execution': 'eager', 'precision': 'FP32', 'batch_size': 1, 'images': 500, 'eval_max_side': 768, 'crop_border': 4, 'PSNR': 31.549627323670766, 'SSIM': 0.9748742182254791, 'MSE': 0.0010000900301261892, 'latency_ms': 39.4882423997879, 'FPS': 25.323993655523427, 'FPS_256': 65.2726996186547, 'FPS_over_MSE': 25321.713938422225, 'params_M': 7.45765, 'GFLOPs_256_counted': 26.563720992, 'GFLOPs_256_supplemental': 2.006319104, 'GFLOPs_256_estimated_total': 28.570040096, 'GFLOPs_test_estimated_mean': 120.7349118033602}
+{'dataset': 'sots-ots', 'model': 'WaveLite_deploy', 'execution': 'eager', 'precision': 'FP32', 'batch_size': 1, 'images': 500, 'eval_max_side': 768, 'crop_border': 4, 'PSNR': 31.549627323670766, 'SSIM': 0.9748742182254791, 'MSE': 0.0010000900301261892, 'latency_ms': 40.048049739837644, 'FPS': 24.970004943967442, 'FPS_256': 65.22195354214341, 'FPS_over_MSE': 24967.75709364564, 'params_M': 7.45765, 'GFLOPs_256_counted': 26.563720992, 'GFLOPs_256_supplemental': 2.006319104, 'GFLOPs_256_estimated_total': 28.570040096, 'GFLOPs_test_estimated_mean': 120.7349118033602}
+# Phase 4 — WaveLite-Final / sots-ots
+
+Trạng thái: **REVIEW**.
+
+**PSNR 31.55 dB · 25.0 FPS · 28.57 GFLOPs ở 256² · FPS/MSE 24,968**
+
+| Model | Thực thi | PSNR | SSIM | MSE | FPS | FPS/MSE | FPS 256 | GFLOPs 256* | Params M |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Reference | eager | 33.2994 | 0.98158 | 0.00071089 | 11.30 | 15892.52 | 41.91 | 68.892 | 11.254 |
+| WaveLite_eager | eager | 31.5496 | 0.97487 | 0.00100009 | 25.32 | 25321.71 | 65.27 | 28.570 | 7.458 |
+| WaveLite_deploy | eager | 31.5496 | 0.97487 | 0.00100009 | 24.97 | 24967.76 | 65.22 | 28.570 | 7.458 |
+
+Kiến trúc: DEN 6 → 2 U-block/group; giảm 33.7% tham số.
+
+ΔPSNR: -1.7498 dB; tăng tốc: 2.210×; tỉ lệ FPS/MSE: 1.571×.
+Mục tiêu: giảm PSNR ≤ 0.30 dB, FPS ≥ 2.00× và FPS 256 ≥ 1.10×. REVIEW nghĩa là chưa đạt đủ điều kiện.
+
+Kiến trúc thực đo: DWT → nhánh Mamba trên LL, giữ các dải cao → IWT → DEN 2 U-block/group và một residual depthwise block/group với ba nhánh FFT/attention → residual depthwise detail. Bản runtime giữ cấu trúc đầy đủ khi chỉ có bộ benchmark; kiến trúc thực đo được lưu trong metadata.
+RGB [0,1], batch 1, FP32, TF32 tắt; max-side=768 (0 nghĩa là kích thước gốc), crop border=4. Không TTA/tiling.
+PSNR/SSIM/MSE là trung bình đều theo ảnh. FPS = 1000 / latency trung bình theo ảnh. FPS/MSE = FPS / MSE trung bình; không lấy trung bình tỉ số và không suy MSE từ PSNR trung bình.
+FPS đo forward gồm pad/crop, đã warm-up; không gồm đọc ảnh, H2D/D2H và tính metric. Tất cả model đo lại trong cùng phiên GPU.
+*GFLOPs: 1 MAC=2 FLOPs; Conv/Linear và SS2D projections counted; scan/FFT/Haar ước tính bổ sung. Normalization, activation, pooling và elementwise chưa được đếm đầy đủ. CSV giữ từng thành phần.
+Test chỉ dùng lập bảng cuối; validation quyết định trọng số và runtime. FPS/MSE là metric phụ thuộc thiết bị và protocol, không thay thế điều kiện PSNR riêng.
+Thông tin tái lập và nguồn trọng số: metadata.json, config.json, inputs.json và SHA256 mã/dữ liệu.
+$ /content/wdmamba_phase4_env311/bin/python -u /content/wdmamba_phase4_new/all/wavelite_all_20261021_152321_2d9efd/datasets/o-hazy/phase4_runner.py /content/wdmamba_phase4_new/all/wavelite_all_20261021_152321_2d9efd/datasets/o-hazy/config.json auto
+/content/wdmamba_phase4_env311/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+Before recovery training: {'reference_params': 9353039, 'final_params': 7457650, 'parameter_reduction': 0.20264953455235246, 'architecture_changed': True, 'compressed': True}
+Checkpoint transfer: {'inherited_params': 7451663, 'new_adapter_params': 5987, 'inherited_fraction': 0.9991972001904085} selected blocks: [0, 1]
+final/0: 50/3000 loss=0.003065
+final/0: 100/3000 loss=0.003057
+final/0: 150/3000 loss=0.003241
+final/0: 200/3000 loss=0.001826
+final: validation=27.6063; best=27.6063 tại step 200
+final/0: 250/3000 loss=0.003063
+final/0: 300/3000 loss=0.002908
+final/0: 350/3000 loss=0.002320
+final/0: 400/3000 loss=0.001956
+final: validation=27.8423; best=27.8423 tại step 400
+final/0: 450/3000 loss=0.001567
+final/0: 500/3000 loss=0.002411
+final/0: 550/3000 loss=0.001773
+final/0: 600/3000 loss=0.003459
+final: validation=27.8450; best=27.8450 tại step 600
+final/0: 650/3000 loss=0.002532
+final/0: 700/3000 loss=0.002656
+final/0: 750/3000 loss=0.002276
+final/0: 800/3000 loss=0.002963
+final: validation=27.8777; best=27.8777 tại step 800
+final/0: 850/3000 loss=0.002580
+final/0: 900/3000 loss=0.001870
+final/0: 950/3000 loss=0.003572
+final/0: 1000/3000 loss=0.002999
+final: validation=27.8279; best=27.8777 tại step 800
+final/0: 1050/3000 loss=0.002138
+final/0: 1100/3000 loss=0.001681
+final/0: 1150/3000 loss=0.001222
+final/0: 1200/3000 loss=0.001781
+final: validation=27.8454; best=27.8777 tại step 800
+final/0: 1250/3000 loss=0.002451
+final/0: 1300/3000 loss=0.002134
+final/0: 1350/3000 loss=0.001188
+final/0: 1400/3000 loss=0.002563
+final: validation=27.8366; best=27.8777 tại step 800
+final/0: 1450/3000 loss=0.002265
+final/0: 1500/3000 loss=0.001678
+final/0: 1550/3000 loss=0.002150
+final/0: 1600/3000 loss=0.001589
+final: validation=27.8047; best=27.8777 tại step 800
+final/0: 1650/3000 loss=0.003101
+final/0: 1700/3000 loss=0.001716
+final/0: 1750/3000 loss=0.003059
+final/0: 1800/3000 loss=0.001682
+final: validation=27.7859; best=27.8777 tại step 800
+final/0: 1850/3000 loss=0.002757
+final/0: 1900/3000 loss=0.001783
+final/0: 1950/3000 loss=0.001324
+final/0: 2000/3000 loss=0.001546
+final: validation=27.7593; best=27.8777 tại step 800
+final/0: 2050/3000 loss=0.003292
+final/0: 2100/3000 loss=0.001193
+final/0: 2150/3000 loss=0.003338
+final/0: 2200/3000 loss=0.005544
+final: validation=27.7667; best=27.8777 tại step 800
+final/0: 2250/3000 loss=0.002583
+final/0: 2300/3000 loss=0.003253
+final/0: 2350/3000 loss=0.002028
+final/0: 2400/3000 loss=0.002697
+final: validation=27.7576; best=27.8777 tại step 800
+final/1: 50/1000 loss=0.003140
+final/1: 100/1000 loss=0.001903
+final/1: 150/1000 loss=0.001861
+final/1: 200/1000 loss=0.003883
+final: validation=27.8731; best=27.8777 tại step 800
+final/1: 250/1000 loss=0.002504
+final/1: 300/1000 loss=0.002448
+final/1: 350/1000 loss=0.002600
+final/1: 400/1000 loss=0.001321
+final: validation=27.9103; best=27.9103 tại step 2800
+final/1: 450/1000 loss=0.002781
+final/1: 500/1000 loss=0.001315
+final/1: 550/1000 loss=0.001607
+final/1: 600/1000 loss=0.001292
+final: validation=27.9499; best=27.9499 tại step 3000
+final/1: 650/1000 loss=0.001076
+final/1: 700/1000 loss=0.001036
+final/1: 750/1000 loss=0.002454
+final/1: 800/1000 loss=0.000713
+final: validation=27.9789; best=27.9789 tại step 3200
+final/1: 850/1000 loss=0.002845
+final/1: 900/1000 loss=0.002984
+final/1: 950/1000 loss=0.001609
+final/1: 1000/1000 loss=0.002448
+final: validation=27.9921; best=27.9921 tại step 3400
+Architecture check: {'reference_params': 9353039, 'final_params': 7457650, 'parameter_reduction': 0.20264953455235246, 'architecture_changed': True, 'compressed': True}
+{'dataset': 'o-hazy', 'model': 'Reference', 'execution': 'eager', 'precision': 'FP32', 'batch_size': 1, 'images': 5, 'eval_max_side': 768, 'crop_border': 4, 'PSNR': 27.906655703855005, 'SSIM': 0.9108872056007385, 'MSE': 0.0016982569205407558, 'latency_ms': 99.46828010559082, 'FPS': 10.053456226833793, 'FPS_256': 50.60052510321228, 'FPS_over_MSE': 5919.86766268121, 'params_M': 9.353039, 'GFLOPs_256_counted': 46.350350112, 'GFLOPs_256_supplemental': 2.006319104, 'GFLOPs_256_estimated_total': 48.356669216, 'GFLOPs_test_estimated_mean': 341.53518829216046}
+{'dataset': 'o-hazy', 'model': 'WaveLite_eager', 'execution': 'eager', 'precision': 'FP32', 'batch_size': 1, 'images': 5, 'eval_max_side': 768, 'crop_border': 4, 'PSNR': 27.85981950829182, 'SSIM': 0.9112608671188355, 'MSE': 0.0017438541870692735, 'latency_ms': 59.034723548889154, 'FPS': 16.93918324478741, 'FPS_256': 62.433243024948304, 'FPS_over_MSE': 9713.646571136462, 'params_M': 7.45765, 'GFLOPs_256_counted': 26.563720992, 'GFLOPs_256_supplemental': 2.006319104, 'GFLOPs_256_estimated_total': 28.570040096, 'GFLOPs_test_estimated_mean': 202.03945299616052}
+{'dataset': 'o-hazy', 'model': 'WaveLite_deploy', 'execution': 'eager', 'precision': 'FP32', 'batch_size': 1, 'images': 5, 'eval_max_side': 768, 'crop_border': 4, 'PSNR': 27.85981950829182, 'SSIM': 0.9112608671188355, 'MSE': 0.0017438541870692735, 'latency_ms': 58.94307977676392, 'FPS': 16.96552002011629, 'FPS_256': 63.25756290664386, 'FPS_over_MSE': 9728.749195842225, 'params_M': 7.45765, 'GFLOPs_256_counted': 26.563720992, 'GFLOPs_256_supplemental': 2.006319104, 'GFLOPs_256_estimated_total': 28.570040096, 'GFLOPs_test_estimated_mean': 202.03945299616052}
+# Phase 4 — WaveLite-Final / o-hazy
+
+Trạng thái: **REVIEW**.
+
+**PSNR 27.86 dB · 17.0 FPS · 28.57 GFLOPs ở 256² · FPS/MSE 9,729**
+
+| Model | Thực thi | PSNR | SSIM | MSE | FPS | FPS/MSE | FPS 256 | GFLOPs 256* | Params M |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Reference | eager | 27.9067 | 0.91089 | 0.00169826 | 10.05 | 5919.87 | 50.60 | 48.357 | 9.353 |
+| WaveLite_eager | eager | 27.8598 | 0.91126 | 0.00174385 | 16.94 | 9713.65 | 62.43 | 28.570 | 7.458 |
+| WaveLite_deploy | eager | 27.8598 | 0.91126 | 0.00174385 | 16.97 | 9728.75 | 63.26 | 28.570 | 7.458 |
+
+Kiến trúc: DEN 4 → 2 U-block/group; giảm 20.3% tham số.
+
+ΔPSNR: -0.0468 dB; tăng tốc: 1.688×; tỉ lệ FPS/MSE: 1.643×.
+Mục tiêu: giảm PSNR ≤ 0.30 dB, FPS ≥ 2.00× và FPS 256 ≥ 1.10×. REVIEW nghĩa là chưa đạt đủ điều kiện.
+
+Kiến trúc thực đo: DWT → nhánh Mamba trên LL, giữ các dải cao → IWT → DEN 2 U-block/group và một residual depthwise block/group với ba nhánh FFT/attention → residual depthwise detail. Bản runtime giữ cấu trúc đầy đủ khi chỉ có bộ benchmark; kiến trúc thực đo được lưu trong metadata.
+RGB [0,1], batch 1, FP32, TF32 tắt; max-side=768 (0 nghĩa là kích thước gốc), crop border=4. Không TTA/tiling.
+PSNR/SSIM/MSE là trung bình đều theo ảnh. FPS = 1000 / latency trung bình theo ảnh. FPS/MSE = FPS / MSE trung bình; không lấy trung bình tỉ số và không suy MSE từ PSNR trung bình.
+FPS đo forward gồm pad/crop, đã warm-up; không gồm đọc ảnh, H2D/D2H và tính metric. Tất cả model đo lại trong cùng phiên GPU.
+*GFLOPs: 1 MAC=2 FLOPs; Conv/Linear và SS2D projections counted; scan/FFT/Haar ước tính bổ sung. Normalization, activation, pooling và elementwise chưa được đếm đầy đủ. CSV giữ từng thành phần.
+Test chỉ dùng lập bảng cuối; validation quyết định trọng số và runtime. FPS/MSE là metric phụ thuộc thiết bị và protocol, không thay thế điều kiện PSNR riêng.
+Thông tin tái lập và nguồn trọng số: metadata.json, config.json, inputs.json và SHA256 mã/dữ liệu.
+O-HAZY: test 41–45 đã được xem ở các phase trước; đây là đánh giá trong quá trình phát triển. Validation có thể trùng scene từng dùng để huấn luyện mô hình tham chiếu, nên không phải holdout độc lập.
+$ /content/wdmamba_phase4_env311/bin/python -u /content/wdmamba_phase4_new/all/wavelite_all_20261021_152321_2d9efd/datasets/i-haze/phase4_runner.py /content/wdmamba_phase4_new/all/wavelite_all_20261021_152321_2d9efd/datasets/i-haze/config.json auto
+/content/wdmamba_phase4_env311/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+reference/0: 50/20000 loss=0.085962
+reference/0: 100/20000 loss=0.019795
+reference/0: 150/20000 loss=0.014892
+reference/0: 200/20000 loss=0.074517
+reference: validation=15.9227; best=15.9227 tại step 200
+reference/0: 250/20000 loss=0.053020
+reference/0: 300/20000 loss=0.010744
+reference/0: 350/20000 loss=0.032400
+reference/0: 400/20000 loss=0.035931
+reference: validation=15.7536; best=15.9227 tại step 200
+reference/0: 450/20000 loss=0.023757
+reference/0: 500/20000 loss=0.011728
+reference/0: 550/20000 loss=0.027215
+reference/0: 600/20000 loss=0.013098
+reference: validation=17.0609; best=17.0609 tại step 600
+reference/0: 650/20000 loss=0.019378
+reference/0: 700/20000 loss=0.006755
+reference/0: 750/20000 loss=0.023589
+reference/0: 800/20000 loss=0.012407
+reference: validation=15.0043; best=17.0609 tại step 600
+reference/0: 850/20000 loss=0.015015
+reference/0: 900/20000 loss=0.021258
+reference/0: 950/20000 loss=0.015181
+reference/0: 1000/20000 loss=0.015327
+reference: validation=17.0287; best=17.0609 tại step 600
+reference/0: 1050/20000 loss=0.018006
+reference/0: 1100/20000 loss=0.009378
+reference/0: 1150/20000 loss=0.004788
+reference/0: 1200/20000 loss=0.008746
+reference: validation=16.4105; best=17.0609 tại step 600
+reference/0: 1250/20000 loss=0.020212
+reference/0: 1300/20000 loss=0.022980
+reference/0: 1350/20000 loss=0.013043
+reference/0: 1400/20000 loss=0.009944
+reference: validation=17.0046; best=17.0609 tại step 600
+reference/0: 1450/20000 loss=0.022996
+reference/0: 1500/20000 loss=0.006969
+reference/0: 1550/20000 loss=0.007084
+reference/0: 1600/20000 loss=0.010780
+reference: validation=16.0607; best=17.0609 tại step 600
+reference/0: 1650/20000 loss=0.008316
+reference/0: 1700/20000 loss=0.018134
+reference/0: 1750/20000 loss=0.009215
+reference/0: 1800/20000 loss=0.012489
+reference: validation=16.7941; best=17.0609 tại step 600
+reference/0: 1850/20000 loss=0.011792
+reference/0: 1900/20000 loss=0.008320
+reference/0: 1950/20000 loss=0.007798
+reference/0: 2000/20000 loss=0.006274
+reference: validation=15.2963; best=17.0609 tại step 600
+reference/0: 2050/20000 loss=0.013641
+reference/0: 2100/20000 loss=0.018880
+reference/0: 2150/20000 loss=0.023371
+reference/0: 2200/20000 loss=0.008764
+reference: validation=17.2064; best=17.2064 tại step 2200
+reference/0: 2250/20000 loss=0.017838
+reference/0: 2300/20000 loss=0.007739
+reference/0: 2350/20000 loss=0.008508
+reference/0: 2400/20000 loss=0.007473
+reference: validation=17.3420; best=17.3420 tại step 2400
+reference/0: 2450/20000 loss=0.003370
+reference/0: 2500/20000 loss=0.008498
+reference/0: 2550/20000 loss=0.012930
+reference/0: 2600/20000 loss=0.004389
+reference: validation=16.3879; best=17.3420 tại step 2400
+reference/0: 2650/20000 loss=0.012987
+reference/0: 2700/20000 loss=0.004897
+reference/0: 2750/20000 loss=0.008211
+reference/0: 2800/20000 loss=0.008399
+reference: validation=17.2740; best=17.3420 tại step 2400
+reference/0: 2850/20000 loss=0.016034
+reference/0: 2900/20000 loss=0.002933
+reference/0: 2950/20000 loss=0.002867
+reference/0: 3000/20000 loss=0.005241
+reference: validation=16.8031; best=17.3420 tại step 2400
+reference/0: 3050/20000 loss=0.005735
+reference/0: 3100/20000 loss=0.008331
+reference/0: 3150/20000 loss=0.021053
+reference/0: 3200/20000 loss=0.007896
+reference: validation=15.3557; best=17.3420 tại step 2400
+reference/0: 3250/20000 loss=0.006883
+reference/0: 3300/20000 loss=0.009022
+reference/0: 3350/20000 loss=0.006285
+reference/0: 3400/20000 loss=0.004908
+reference: validation=16.1718; best=17.3420 tại step 2400
+reference/0: 3450/20000 loss=0.015072
+reference/0: 3500/20000 loss=0.007458
+reference/0: 3550/20000 loss=0.004415
+reference/0: 3600/20000 loss=0.012938
+reference: validation=17.2841; best=17.3420 tại step 2400
+reference/0: 3650/20000 loss=0.016966
+reference/0: 3700/20000 loss=0.006766
+reference/0: 3750/20000 loss=0.003696
+reference/0: 3800/20000 loss=0.012947
+reference: validation=15.8383; best=17.3420 tại step 2400
+reference/0: 3850/20000 loss=0.008946
+reference/0: 3900/20000 loss=0.004668
+reference/0: 3950/20000 loss=0.005115
+reference/0: 4000/20000 loss=0.031675
+reference: validation=14.6342; best=17.3420 tại step 2400
+reference/1: 50/5000 loss=0.008673
+reference/1: 100/5000 loss=0.005193
+reference/1: 150/5000 loss=0.013094
+reference/1: 200/5000 loss=0.004256
+reference: validation=17.3837; best=17.3837 tại step 4200
+reference/1: 250/5000 loss=0.012983
+reference/1: 300/5000 loss=0.006058
+reference/1: 350/5000 loss=0.003516
+reference/1: 400/5000 loss=0.007861
+reference: validation=17.6634; best=17.6634 tại step 4400
+reference/1: 450/5000 loss=0.004003
+reference/1: 500/5000 loss=0.008138
+reference/1: 550/5000 loss=0.007497
+reference/1: 600/5000 loss=0.005547
+reference: validation=16.8636; best=17.6634 tại step 4400
+reference/1: 650/5000 loss=0.006142
+reference/1: 700/5000 loss=0.004471
+reference/1: 750/5000 loss=0.008849
+reference/1: 800/5000 loss=0.003224
+reference: validation=17.5492; best=17.6634 tại step 4400
+reference/1: 850/5000 loss=0.006073
+reference/1: 900/5000 loss=0.004439
+reference/1: 950/5000 loss=0.005658
+reference/1: 1000/5000 loss=0.006187
+reference: validation=17.9933; best=17.9933 tại step 5000
+reference/1: 1050/5000 loss=0.007543
+reference/1: 1100/5000 loss=0.005787
+reference/1: 1150/5000 loss=0.008270
+reference/1: 1200/5000 loss=0.003622
+reference: validation=17.6812; best=17.9933 tại step 5000
+reference/1: 1250/5000 loss=0.005378
+reference/1: 1300/5000 loss=0.004802
+reference/1: 1350/5000 loss=0.005546
+reference/1: 1400/5000 loss=0.004479
+reference: validation=18.0298; best=18.0298 tại step 5400
+reference/1: 1450/5000 loss=0.004475
+reference/1: 1500/5000 loss=0.004818
+reference/1: 1550/5000 loss=0.006830
+reference/1: 1600/5000 loss=0.003548
+reference: validation=17.4361; best=18.0298 tại step 5400
+reference/1: 1650/5000 loss=0.005604
+reference/1: 1700/5000 loss=0.003980
+reference/1: 1750/5000 loss=0.004991
+reference/1: 1800/5000 loss=0.006563
+reference: validation=16.4371; best=18.0298 tại step 5400
+reference/1: 1850/5000 loss=0.006592
+reference/1: 1900/5000 loss=0.003956
+reference/1: 1950/5000 loss=0.007517
+reference/1: 2000/5000 loss=0.007975
+reference: validation=17.9158; best=18.0298 tại step 5400
+reference/1: 2050/5000 loss=0.004357
+reference/1: 2100/5000 loss=0.004421
+reference/1: 2150/5000 loss=0.006518
+reference/1: 2200/5000 loss=0.005376
+reference: validation=17.6117; best=18.0298 tại step 5400
+reference/1: 2250/5000 loss=0.005477
+reference/1: 2300/5000 loss=0.005043
+reference/1: 2350/5000 loss=0.005099
+reference/1: 2400/5000 loss=0.007082
+reference: validation=17.4447; best=18.0298 tại step 5400
+reference/1: 2450/5000 loss=0.002860
+reference/1: 2500/5000 loss=0.006371
+reference/1: 2550/5000 loss=0.004878
+reference/1: 2600/5000 loss=0.005445
+reference: validation=18.2058; best=18.2058 tại step 6600
+reference/1: 2650/5000 loss=0.005230
+reference/1: 2700/5000 loss=0.003734
+reference/1: 2750/5000 loss=0.004830
+reference/1: 2800/5000 loss=0.003246
+reference: validation=17.3898; best=18.2058 tại step 6600
+reference/1: 2850/5000 loss=0.004497
+reference/1: 2900/5000 loss=0.003632
+reference/1: 2950/5000 loss=0.002239
+reference/1: 3000/5000 loss=0.004905
+reference: validation=17.4494; best=18.2058 tại step 6600
+reference/1: 3050/5000 loss=0.005929
+reference/1: 3100/5000 loss=0.005398
+reference/1: 3150/5000 loss=0.004340
+reference/1: 3200/5000 loss=0.004258
+reference: validation=18.0761; best=18.2058 tại step 6600
+reference/1: 3250/5000 loss=0.003276
+reference/1: 3300/5000 loss=0.004023
+reference/1: 3350/5000 loss=0.004373
+reference/1: 3400/5000 loss=0.003515
+reference: validation=17.6123; best=18.2058 tại step 6600
+reference/1: 3450/5000 loss=0.004245
+reference/1: 3500/5000 loss=0.006002
+reference/1: 3550/5000 loss=0.002397
+reference/1: 3600/5000 loss=0.003647
+reference: validation=18.5401; best=18.5401 tại step 7600
+reference/1: 3650/5000 loss=0.003824
+reference/1: 3700/5000 loss=0.004602
+reference/1: 3750/5000 loss=0.003501
+reference/1: 3800/5000 loss=0.003830
+reference: validation=18.2011; best=18.5401 tại step 7600
+reference/1: 3850/5000 loss=0.003985
+reference/1: 3900/5000 loss=0.002735
+reference/1: 3950/5000 loss=0.005476
+reference/1: 4000/5000 loss=0.005951
+reference: validation=16.9790; best=18.5401 tại step 7600
+reference/1: 4050/5000 loss=0.005643
+reference/1: 4100/5000 loss=0.004287
+reference/1: 4150/5000 loss=0.004817
+reference/1: 4200/5000 loss=0.005010
+reference: validation=17.9983; best=18.5401 tại step 7600
+reference/1: 4250/5000 loss=0.002923
+reference/1: 4300/5000 loss=0.003828
+reference/1: 4350/5000 loss=0.006195
+reference/1: 4400/5000 loss=0.003325
+reference: validation=18.6137; best=18.6137 tại step 8400
+reference/1: 4450/5000 loss=0.005318
+reference/1: 4500/5000 loss=0.003602
+reference/1: 4550/5000 loss=0.002851
+reference/1: 4600/5000 loss=0.003552
+reference: validation=17.9624; best=18.6137 tại step 8400
+reference/1: 4650/5000 loss=0.003085
+reference/1: 4700/5000 loss=0.004980
+reference/1: 4750/5000 loss=0.003363
+reference/1: 4800/5000 loss=0.004164
+reference: validation=17.6254; best=18.6137 tại step 8400
+reference/1: 4850/5000 loss=0.003682
+reference/1: 4900/5000 loss=0.003510
+reference/1: 4950/5000 loss=0.003959
+reference/1: 5000/5000 loss=0.003411
+reference: validation=17.4378; best=18.6137 tại step 8400
+reference/2: 50/2000 loss=0.004994
+reference/2: 100/2000 loss=0.007745
+reference/2: 150/2000 loss=0.004004
+reference/2: 200/2000 loss=0.004891
+reference: validation=18.1003; best=18.6137 tại step 8400
+reference/2: 250/2000 loss=0.003842
+reference/2: 300/2000 loss=0.003851
+reference/2: 350/2000 loss=0.003923
+reference/2: 400/2000 loss=0.003644
+reference: validation=17.5895; best=18.6137 tại step 8400
+reference/2: 450/2000 loss=0.002899
+reference/2: 500/2000 loss=0.003625
+reference/2: 550/2000 loss=0.002556
+reference/2: 600/2000 loss=0.003391
+reference: validation=17.8756; best=18.6137 tại step 8400
+reference/2: 650/2000 loss=0.002503
+reference/2: 700/2000 loss=0.003322
+reference/2: 750/2000 loss=0.001986
+reference/2: 800/2000 loss=0.001988
+reference: validation=18.0056; best=18.6137 tại step 8400
+reference/2: 850/2000 loss=0.002534
+reference/2: 900/2000 loss=0.001829
+reference/2: 950/2000 loss=0.002817
+reference/2: 1000/2000 loss=0.001811
+reference: validation=18.1583; best=18.6137 tại step 8400
+reference/2: 1050/2000 loss=0.002215
+reference/2: 1100/2000 loss=0.002437
+reference/2: 1150/2000 loss=0.002123
+reference/2: 1200/2000 loss=0.002372
+reference: validation=18.2287; best=18.6137 tại step 8400
+reference/2: 1250/2000 loss=0.002625
+reference/2: 1300/2000 loss=0.001717
+reference/2: 1350/2000 loss=0.001903
+reference/2: 1400/2000 loss=0.002907
+reference: validation=17.0419; best=18.6137 tại step 8400
+reference/2: 1450/2000 loss=0.002950
+reference/2: 1500/2000 loss=0.001905
+reference/2: 1550/2000 loss=0.002378
+reference/2: 1600/2000 loss=0.003642
+reference: validation=18.0077; best=18.6137 tại step 8400
+final/0: 50/20000 loss=0.032650
+final/0: 100/20000 loss=0.019735
+final/0: 150/20000 loss=0.023801
+final/0: 200/20000 loss=0.063039
+final: validation=15.6727; best=15.6727 tại step 200
+final/0: 250/20000 loss=0.027511
+final/0: 300/20000 loss=0.020144
+final/0: 350/20000 loss=0.044107
+final/0: 400/20000 loss=0.015983
+final: validation=14.7576; best=15.6727 tại step 200
+final/0: 450/20000 loss=0.011853
+final/0: 500/20000 loss=0.078150
+final/0: 550/20000 loss=0.019039
+final/0: 600/20000 loss=0.014804
+final: validation=15.8993; best=15.8993 tại step 600
+final/0: 650/20000 loss=0.015078
+final/0: 700/20000 loss=0.009471
+final/0: 750/20000 loss=0.013187
+final/0: 800/20000 loss=0.010134
+final: validation=16.1426; best=16.1426 tại step 800
+final/0: 850/20000 loss=0.007462
+final/0: 900/20000 loss=0.005012
+final/0: 950/20000 loss=0.004955
+final/0: 1000/20000 loss=0.013760
+final: validation=15.1947; best=16.1426 tại step 800
+final/0: 1050/20000 loss=0.006166
+final/0: 1100/20000 loss=0.021768
+final/0: 1150/20000 loss=0.006467
+final/0: 1200/20000 loss=0.021188
+final: validation=16.8582; best=16.8582 tại step 1200
+final/0: 1250/20000 loss=0.010584
+final/0: 1300/20000 loss=0.008417
+final/0: 1350/20000 loss=0.021446
+final/0: 1400/20000 loss=0.016953
+final: validation=15.5563; best=16.8582 tại step 1200
+final/0: 1450/20000 loss=0.018268
+final/0: 1500/20000 loss=0.008352
+final/0: 1550/20000 loss=0.007272
+final/0: 1600/20000 loss=0.006419
+final: validation=16.4291; best=16.8582 tại step 1200
+final/0: 1650/20000 loss=0.008681
+final/0: 1700/20000 loss=0.010749
+final/0: 1750/20000 loss=0.005984
+final/0: 1800/20000 loss=0.009092
+final: validation=17.3658; best=17.3658 tại step 1800
+final/0: 1850/20000 loss=0.009385
+final/0: 1900/20000 loss=0.008790
+final/0: 1950/20000 loss=0.009691
+final/0: 2000/20000 loss=0.015566
+final: validation=17.2469; best=17.3658 tại step 1800
+final/0: 2050/20000 loss=0.016843
+final/0: 2100/20000 loss=0.018021
+final/0: 2150/20000 loss=0.010635
+final/0: 2200/20000 loss=0.008250
+final: validation=17.3598; best=17.3658 tại step 1800
+final/0: 2250/20000 loss=0.007527
+final/0: 2300/20000 loss=0.007394
+final/0: 2350/20000 loss=0.003522
+final/0: 2400/20000 loss=0.007634
+final: validation=17.1518; best=17.3658 tại step 1800
+final/0: 2450/20000 loss=0.008377
+final/0: 2500/20000 loss=0.019194
+final/0: 2550/20000 loss=0.013514
+final/0: 2600/20000 loss=0.011034
+final: validation=17.0597; best=17.3658 tại step 1800
+final/0: 2650/20000 loss=0.006401
+final/0: 2700/20000 loss=0.007303
+final/0: 2750/20000 loss=0.008257
+final/0: 2800/20000 loss=0.004842
+final: validation=16.5728; best=17.3658 tại step 1800
+final/0: 2850/20000 loss=0.007949
+final/0: 2900/20000 loss=0.004790
+final/0: 2950/20000 loss=0.009118
+final/0: 3000/20000 loss=0.010946
+final: validation=16.5608; best=17.3658 tại step 1800
+final/0: 3050/20000 loss=0.005767
+final/0: 3100/20000 loss=0.005489
+final/0: 3150/20000 loss=0.006030
+final/0: 3200/20000 loss=0.016462
+final: validation=18.0921; best=18.0921 tại step 3200
+final/0: 3250/20000 loss=0.013319
+final/0: 3300/20000 loss=0.010022
+final/0: 3350/20000 loss=0.009164
+final/0: 3400/20000 loss=0.005878
+final: validation=17.6792; best=18.0921 tại step 3200
+final/0: 3450/20000 loss=0.005127
+final/0: 3500/20000 loss=0.003953
+final/0: 3550/20000 loss=0.008690
+final/0: 3600/20000 loss=0.010243
+final: validation=17.9914; best=18.0921 tại step 3200
+final/0: 3650/20000 loss=0.005558
+final/0: 3700/20000 loss=0.007988
+final/0: 3750/20000 loss=0.008155
+final/0: 3800/20000 loss=0.004890
+final: validation=16.2866; best=18.0921 tại step 3200
+final/0: 3850/20000 loss=0.012267
+final/0: 3900/20000 loss=0.004985
+final/0: 3950/20000 loss=0.008801
+final/0: 4000/20000 loss=0.004738
+final: validation=17.6092; best=18.0921 tại step 3200
+final/0: 4050/20000 loss=0.004790
+final/0: 4100/20000 loss=0.004726
+final/0: 4150/20000 loss=0.004333
+final/0: 4200/20000 loss=0.004037
+final: validation=17.2768; best=18.0921 tại step 3200
+final/0: 4250/20000 loss=0.011241
+final/0: 4300/20000 loss=0.004055
+final/0: 4350/20000 loss=0.003760
+final/0: 4400/20000 loss=0.014522
+final: validation=17.2092; best=18.0921 tại step 3200
+final/0: 4450/20000 loss=0.002953
+final/0: 4500/20000 loss=0.003972
+final/0: 4550/20000 loss=0.012459
+final/0: 4600/20000 loss=0.005057
+final: validation=17.5504; best=18.0921 tại step 3200
+final/0: 4650/20000 loss=0.002970
+final/0: 4700/20000 loss=0.010262
+final/0: 4750/20000 loss=0.008094
+final/0: 4800/20000 loss=0.006208
+final: validation=17.1324; best=18.0921 tại step 3200
+final/1: 50/5000 loss=0.011250
+final/1: 100/5000 loss=0.005760
+final/1: 150/5000 loss=0.006758
+final/1: 200/5000 loss=0.006900
+final: validation=16.3981; best=18.0921 tại step 3200
+final/1: 250/5000 loss=0.006382
+final/1: 300/5000 loss=0.005310
+final/1: 350/5000 loss=0.006378
+final/1: 400/5000 loss=0.004717
+final: validation=17.7377; best=18.0921 tại step 3200
+final/1: 450/5000 loss=0.004041
+final/1: 500/5000 loss=0.008113
+final/1: 550/5000 loss=0.005372
+final/1: 600/5000 loss=0.006611
+final: validation=18.6264; best=18.6264 tại step 5400
+final/1: 650/5000 loss=0.003393
+final/1: 700/5000 loss=0.004530
+final/1: 750/5000 loss=0.005354
+final/1: 800/5000 loss=0.004878
+final: validation=17.3715; best=18.6264 tại step 5400
+final/1: 850/5000 loss=0.003728
+final/1: 900/5000 loss=0.003230
+final/1: 950/5000 loss=0.004644
+final/1: 1000/5000 loss=0.007084
+final: validation=18.1110; best=18.6264 tại step 5400
+final/1: 1050/5000 loss=0.004995
+final/1: 1100/5000 loss=0.004148
+final/1: 1150/5000 loss=0.005479
+final/1: 1200/5000 loss=0.002344
+final: validation=17.6473; best=18.6264 tại step 5400
+final/1: 1250/5000 loss=0.007268
+final/1: 1300/5000 loss=0.004214
+final/1: 1350/5000 loss=0.003322
+final/1: 1400/5000 loss=0.004471
+final: validation=18.7545; best=18.7545 tại step 6200
+final/1: 1450/5000 loss=0.003735
+final/1: 1500/5000 loss=0.005207
+final/1: 1550/5000 loss=0.004341
+final/1: 1600/5000 loss=0.005023
+final: validation=18.5243; best=18.7545 tại step 6200
+final/1: 1650/5000 loss=0.005358
+final/1: 1700/5000 loss=0.005142
+final/1: 1750/5000 loss=0.002924
+final/1: 1800/5000 loss=0.005835
+final: validation=18.4813; best=18.7545 tại step 6200
+final/1: 1850/5000 loss=0.005022
+final/1: 1900/5000 loss=0.003924
+final/1: 1950/5000 loss=0.004334
+final/1: 2000/5000 loss=0.004063
+final: validation=17.1021; best=18.7545 tại step 6200
+final/1: 2050/5000 loss=0.004345
+final/1: 2100/5000 loss=0.003887
+final/1: 2150/5000 loss=0.004372
+final/1: 2200/5000 loss=0.004810
+final: validation=17.6116; best=18.7545 tại step 6200
+final/1: 2250/5000 loss=0.002871
+final/1: 2300/5000 loss=0.007654
+final/1: 2350/5000 loss=0.003513
+final/1: 2400/5000 loss=0.002214
+final: validation=17.7205; best=18.7545 tại step 6200
+final/1: 2450/5000 loss=0.003182
+final/1: 2500/5000 loss=0.003790
+final/1: 2550/5000 loss=0.003264
+final/1: 2600/5000 loss=0.005523
+final: validation=16.9610; best=18.7545 tại step 6200
+final/1: 2650/5000 loss=0.003963
+final/1: 2700/5000 loss=0.004914
+final/1: 2750/5000 loss=0.003562
+final/1: 2800/5000 loss=0.003556
+final: validation=17.7315; best=18.7545 tại step 6200
+final/1: 2850/5000 loss=0.005364
+final/1: 2900/5000 loss=0.003059
+final/1: 2950/5000 loss=0.004784
+final/1: 3000/5000 loss=0.005188
+final: validation=17.6730; best=18.7545 tại step 6200
+final/2: 50/2000 loss=0.008335
+final/2: 100/2000 loss=0.004426
+final/2: 150/2000 loss=0.005616
+final/2: 200/2000 loss=0.009111
+final: validation=17.7036; best=18.7545 tại step 6200
+final/2: 250/2000 loss=0.004558
+final/2: 300/2000 loss=0.003327
+final/2: 350/2000 loss=0.004117
+final/2: 400/2000 loss=0.003537
+final: validation=17.2522; best=18.7545 tại step 6200
+final/2: 450/2000 loss=0.006741
+final/2: 500/2000 loss=0.002788
+final/2: 550/2000 loss=0.003136
+final/2: 600/2000 loss=0.003058
+final: validation=17.8274; best=18.7545 tại step 6200
+final/2: 650/2000 loss=0.006446
+final/2: 700/2000 loss=0.003777
+final/2: 750/2000 loss=0.003855
+final/2: 800/2000 loss=0.003056
+final: validation=17.3564; best=18.7545 tại step 6200
+final/2: 850/2000 loss=0.003168
+final/2: 900/2000 loss=0.005295
+final/2: 950/2000 loss=0.002441
+final/2: 1000/2000 loss=0.003260
+final: validation=17.6779; best=18.7545 tại step 6200
+final/2: 1050/2000 loss=0.003955
+final/2: 1100/2000 loss=0.002749
+final/2: 1150/2000 loss=0.001810
+final/2: 1200/2000 loss=0.003254
+final: validation=17.9293; best=18.7545 tại step 6200
+final/2: 1250/2000 loss=0.004478
+final/2: 1300/2000 loss=0.003659
+final/2: 1350/2000 loss=0.004214
+final/2: 1400/2000 loss=0.003599
+final: validation=17.1924; best=18.7545 tại step 6200
+final/2: 1450/2000 loss=0.003547
+final/2: 1500/2000 loss=0.003062
+final/2: 1550/2000 loss=0.002485
+final/2: 1600/2000 loss=0.002409
+final: validation=17.5627; best=18.7545 tại step 6200
+Architecture check: {'reference_params': 9353039, 'final_params': 6506962, 'parameter_reduction': 0.30429435822944817, 'architecture_changed': True, 'compressed': True}
+{'dataset': 'i-haze', 'model': 'Reference', 'execution': 'eager', 'precision': 'FP32', 'batch_size': 1, 'images': 5, 'eval_max_side': 768, 'crop_border': 4, 'PSNR': 18.94345379909186, 'SSIM': 0.8063344478607177, 'MSE': 0.013646978714578617, 'latency_ms': 88.65936889648438, 'FPS': 11.279123824663872, 'FPS_256': 50.189422739598974, 'FPS_over_MSE': 826.4923731884154, 'params_M': 9.353039, 'GFLOPs_256_counted': 46.350350112, 'GFLOPs_256_supplemental': 2.006319104, 'GFLOPs_256_estimated_total': 48.356669216, 'GFLOPs_test_estimated_mean': 301.5322122285197}
+{'dataset': 'i-haze', 'model': 'WaveLite_eager', 'execution': 'eager', 'precision': 'FP32', 'batch_size': 1, 'images': 5, 'eval_max_side': 768, 'crop_border': 4, 'PSNR': 20.002575877363633, 'SSIM': 0.8137140274047852, 'MSE': 0.011448738889964694, 'latency_ms': 35.031904964447016, 'FPS': 28.54540742260161, 'FPS_256': 74.53437164473031, 'FPS_over_MSE': 2493.323299356829, 'params_M': 6.506962, 'GFLOPs_256_counted': 16.2960648, 'GFLOPs_256_supplemental': 2.006319104, 'GFLOPs_256_estimated_total': 18.302383904, 'GFLOPs_test_estimated_mean': 114.44428616131975}
+{'dataset': 'i-haze', 'model': 'WaveLite_deploy', 'execution': 'eager', 'precision': 'FP32', 'batch_size': 1, 'images': 5, 'eval_max_side': 768, 'crop_border': 4, 'PSNR': 20.002575877363633, 'SSIM': 0.8137140274047852, 'MSE': 0.011448738889964694, 'latency_ms': 35.22797079086304, 'FPS': 28.386534266667628, 'FPS_256': 73.03267324899205, 'FPS_over_MSE': 2479.4463861473537, 'params_M': 6.506962, 'GFLOPs_256_counted': 16.2960648, 'GFLOPs_256_supplemental': 2.006319104, 'GFLOPs_256_estimated_total': 18.302383904, 'GFLOPs_test_estimated_mean': 114.44428616131975}
+# Phase 4 — WaveLite-Final / i-haze
+
+Trạng thái: **PASS**.
+
+**PSNR 20.00 dB · 28.4 FPS · 18.30 GFLOPs ở 256² · FPS/MSE 2,479**
+
+| Model | Thực thi | PSNR | SSIM | MSE | FPS | FPS/MSE | FPS 256 | GFLOPs 256* | Params M |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Reference | eager | 18.9435 | 0.80633 | 0.01364698 | 11.28 | 826.49 | 50.19 | 48.357 | 9.353 |
+| WaveLite_eager | eager | 20.0026 | 0.81371 | 0.01144874 | 28.55 | 2493.32 | 74.53 | 18.302 | 6.507 |
+| WaveLite_deploy | eager | 20.0026 | 0.81371 | 0.01144874 | 28.39 | 2479.45 | 73.03 | 18.302 | 6.507 |
+
+Kiến trúc: DEN 4 → 1 U-block/group; giảm 30.4% tham số.
+
+ΔPSNR: +1.0591 dB; tăng tốc: 2.517×; tỉ lệ FPS/MSE: 3.000×.
+Mục tiêu: giảm PSNR ≤ 0.30 dB, FPS ≥ 2.00× và FPS 256 ≥ 1.10×. REVIEW nghĩa là chưa đạt đủ điều kiện.
+
+Kiến trúc thực đo: DWT → nhánh Mamba trên LL, giữ các dải cao → IWT → DEN 1 U-block/group và một residual depthwise block/group với ba nhánh FFT/attention → residual depthwise detail. Bản runtime giữ cấu trúc đầy đủ khi chỉ có bộ benchmark; kiến trúc thực đo được lưu trong metadata.
+RGB [0,1], batch 1, FP32, TF32 tắt; max-side=768 (0 nghĩa là kích thước gốc), crop border=4. Không TTA/tiling.
+PSNR/SSIM/MSE là trung bình đều theo ảnh. FPS = 1000 / latency trung bình theo ảnh. FPS/MSE = FPS / MSE trung bình; không lấy trung bình tỉ số và không suy MSE từ PSNR trung bình.
+FPS đo forward gồm pad/crop, đã warm-up; không gồm đọc ảnh, H2D/D2H và tính metric. Tất cả model đo lại trong cùng phiên GPU.
+*GFLOPs: 1 MAC=2 FLOPs; Conv/Linear và SS2D projections counted; scan/FFT/Haar ước tính bổ sung. Normalization, activation, pooling và elementwise chưa được đếm đầy đủ. CSV giữ từng thành phần.
+Test chỉ dùng lập bảng cuối; validation quyết định trọng số và runtime. FPS/MSE là metric phụ thuộc thiết bị và protocol, không thay thế điều kiện PSNR riêng.
+Thông tin tái lập và nguồn trọng số: metadata.json, config.json, inputs.json và SHA256 mã/dữ liệu.
